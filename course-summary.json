@@ -1,0 +1,102 @@
+{
+  "modules": [
+    {
+      "name": "Chess vision & safety",
+      "subtitle": "Think clearly, see threats, prevent blunders",
+      "ids": [
+        1,
+        4,
+        17,
+        18,
+        19
+      ],
+      "icon": "♔",
+      "color": "green"
+    },
+    {
+      "name": "Tactical patterns",
+      "subtitle": "Spot forcing ideas and calculate their consequences",
+      "ids": [
+        2,
+        3,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "icon": "♘",
+      "color": "gold"
+    },
+    {
+      "name": "Opening principles",
+      "subtitle": "Develop with purpose, protect the king, play the center",
+      "ids": [
+        5,
+        6,
+        25,
+        26
+      ],
+      "icon": "♙",
+      "color": "blue"
+    },
+    {
+      "name": "Opening laboratory",
+      "subtitle": "Compare options before choosing a repertoire",
+      "ids": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        27,
+        28,
+        29,
+        30
+      ],
+      "icon": "♗",
+      "color": "lavender"
+    },
+    {
+      "name": "Middlegame strategy",
+      "subtitle": "Build plans, improve pieces, and create pawn breaks",
+      "ids": [
+        13,
+        14,
+        31,
+        32,
+        33,
+        34
+      ],
+      "icon": "♜",
+      "color": "pink"
+    },
+    {
+      "name": "Endgame technique",
+      "subtitle": "Convert advantages and defend difficult endings",
+      "ids": [
+        15,
+        35,
+        36,
+        37,
+        38
+      ],
+      "icon": "♚",
+      "color": "teal"
+    },
+    {
+      "name": "Practical improvement",
+      "subtitle": "Analyze, review, and transfer knowledge into games",
+      "ids": [
+        16,
+        39,
+        40
+      ],
+      "icon": "♛",
+      "color": "gold"
+    }
+  ],
+  "lessonCount": 40,
+  "exerciseCount": 121
+}

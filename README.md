@@ -1,2 +1,64 @@
-# chess-academy
-A free, mastery-based chess learning platform with interactive lessons, tactics, and Stockfish analysis.
+# Chess Academy 2.0 — Mastery Course
+
+An offline-capable chess-learning website with a dark-green interface, 40 lessons, 121 practice exercises, placement assessment, strict lesson mastery, spaced reviews, 10 opening examples and recall drills, PGN game import, mistake journal, Stockfish analysis, and computer play.
+
+## Start on Windows
+
+1. Extract **the entire ZIP**, keeping the `engine` folder with the app.
+2. Install Python 3 if it isn't already installed (`python.org/downloads`).
+3. Double-click `start-server.bat` in the extracted folder.
+4. Open **http://localhost:8765** in Chrome, Edge, or Firefox. Keep the command window running while using the app. Exit with Ctrl+C.
+
+## Start on macOS / Linux
+
+From this folder run `python3 server.py`, then open **http://localhost:8765**. Or run `./start-server.sh`.
+
+Opening `index.html` directly with a `file://` URL will often block WebAssembly engine workers. Start with the local server instead. If port 8765 is already in use, set `PORT` to another port and then use that port in the URL.
+
+## Website hosting
+
+Serve all the files over HTTPS. **Lite Stockfish** runs without special isolation headers. To use **Full Stockfish**, configure `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` (plus correct `application/wasm` MIME type). Included `_headers` and `netlify.toml` support hosts that accept those formats. GitHub Pages doesn't support custom headers, so use Lite there.
+
+## Learning workflow
+
+1. Start with the optional **27-question placement assessment**. This is a diagnostic, not an Elo rating.
+2. Open **Curriculum**. Study the model position and explanations, then practice the lesson.
+3. Pass the **unassisted mastery check** (at least 80%, and any board-move questions must all be correct) to unlock the next lesson. You can review completed lessons freely.
+4. Train **Due Reviews** or specific tactical/opening/endgame topics.
+5. In **Opening laboratory**, compare lines, shortlist candidates, and use **Practice from memory** for an unguided replay. Computer replies in recall drills follow the selected model line; they are not Stockfish's independent choice.
+6. In **Analyze games**, paste or upload a standard PGN, play through it, and use **Review game** to identify substantial engine-evaluation drops (the first 40 half-moves in this version). Save positions into your mistake journal and revisit them in Practice.
+7. Use **Play Stockfish** for practice against the Lite engine. Shallow search settings vary difficulty, but are not calibrated Elo ratings.
+
+## Progress and privacy
+
+Progress is stored **only in this browser's localStorage**. It does **not** sync automatically across devices yet. Use **Settings → Export progress**, then import the JSON backup on the other device to transfer your data. Use the same browser and localhost port if possible to keep your storage consistent. Browser-data clearing can erase progress if you haven't exported it.
+
+## About Stockfish
+
+- The **Lite single-threaded** engine is approximately 1.8 MB and is the default for lessons, quick analysis, and practice games.
+- The **Full multithreaded** engine is approximately 99 MB and is optional for deep analysis; it uses substantially more memory/CPU. On modest hardware use Lite.
+- Stockfish itself outputs chess evaluations and variations, **not reliable natural-language coaching**. The site's short explanations are authored or heuristic and should be treated as learning aids; evaluate critical conclusions against the displayed line.
+- Analysis quality and move labels depend on the requested depth/time. They are approximations, not objective labels for a player's ability.
+
+## What's included and not included
+
+**Included:** functional move-legality engine, progression and retry tests, opening practice, PGN mainline importer, local engine connection, sourced course content, backup/export tools, coursebook PDF and source notices. **Not yet included:** cloud login/synchronization, personalized natural-language AI tutor, all-variations PGN support, a complete real-time opening statistics database, or an unlimited auto-generated curriculum.
+
+## Important limitations
+
+- The course currently contains **40 authored lessons and 121 exercises** in seven domains. It is substantial but not a complete replacement for years of chess study; more content can be added to the `course-data-v2.js` catalogue.
+- The placement assessment offers limited early-lesson credit, not a fully adaptive rearrangement of all modules.
+- Unassisted lesson quizzes use the existing question bank (with answer order shuffled); reviewing them alone does not prove live-game transfer. Use unfamiliar games, opening recall, and spaced reviews as well.
+- Game review currently evaluates up to 40 half-moves per import, rather than all game moves.
+
+## Developer testing
+
+`node tests/smoke.cjs` checks state, navigation, mastery, PGN import and opening drills.
+`node tests/uci-wrapper.cjs` verifies the engine-service interface against the real Lite UCI engine. Full Stockfish was separately tested through its Node UCI CLI. Browser-specific testing is still recommended on your own device.
+
+## License
+
+See `THIRD_PARTY_NOTICES.md` and `LICENSE-GPL-3.0.txt` for Stockfish licensing.
+
+## Lite package note
+This ZIP intentionally excludes the 99 MB Full Stockfish engine. For full-mode engine analysis, use the separately provided **Full Stockfish** package instead. The Lite version includes all lessons and features, including analysis and game review; it only uses the smaller engine.
