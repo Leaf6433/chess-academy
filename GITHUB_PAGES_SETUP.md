@@ -17,3 +17,7 @@ The site is static and uses the **Lite** Stockfish.js WebAssembly worker, which 
 - Back up progress in **Settings → Export progress**. Cloud sync/accounts are not configured.
 
 GitHub Pages may take a few minutes to make an updated deployment visible after Actions reports success. The published site and local ZIP share the same learning data.
+
+## Re-publishing after enabling Pages
+
+Any new commit to `main` starts the `Publish Chess Academy` workflow. In **Actions**, open the newest run to confirm that its **Publish** step succeeds. If GitHub reports a Pages configuration or permissions problem, review **Settings → Pages** and the workflow run logs before retrying.
