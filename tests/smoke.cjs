@@ -63,7 +63,11 @@ for(const q of global.FOUNDATION_DRILLS){
  assert(t.D.lessons.some(l=>l.id===q.lesson),'foundation drill has matching lesson');
 }
 nav('dashboard');assert(app.innerHTML.includes('Foundation training'));
-assert(app.innerHTML.includes('Foundation-first track')||app.innerHTML.includes('Foundation & mastery track'));
+assert(app.innerHTML.includes('Your courses'),'Cozy dashboard course grid');
+assert(app.innerHTML.includes('Continue learning'),'Cozy dashboard continuation card');
+assert(app.innerHTML.includes('Today\'s focus'),'Cozy dashboard focus panel');
+assert(app.innerHTML.includes('Recent activity'),'Cozy dashboard activity panel');
+assert(app.innerHTML.includes('data-module="0"'),'Course card navigates to first module');
 nav('practice','foundation');
 assert.equal(t.ui.filter,'foundation');
 assert(app.innerHTML.includes('Practice skills that decide real games'));
