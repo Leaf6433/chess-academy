@@ -13,5 +13,17 @@
 </head>
 <body><div id="app"><div class="loading"><div class="spinner">♞</div><strong>Opening Chess Academy…</strong></div></div>
 <input type="file" id="import-pgn" accept=".pgn,text/plain" hidden><input type="file" id="import-progress" accept=".json,application/json" hidden>
-<script>if ('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')) navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+<script>
+if ('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')) {
+ navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg=>{
+  reg.update().catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   if(!sessionStorage.getItem('chess-academy-new-sw-loaded')) {
+    sessionStorage.setItem('chess-academy-new-sw-loaded','1');
+    location.reload();
+   }
+  });
+ }).catch(()=>{});
+}
+</script>
 </body></html>
