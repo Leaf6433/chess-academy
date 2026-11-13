@@ -227,7 +227,10 @@ h1,h2,h3{letter-spacing:-.45px}
 /* Official Chess.com Neo artwork: keep precisely scaled images in every board. */
 .neo-piece-wrap{position:relative;display:block;flex:none;width:94%;height:94%;pointer-events:none;user-select:none}
 .neo-piece-wrap .neo-piece-fallback,.neo-piece-wrap .neo-piece-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
-.neo-piece-wrap .neo-piece-fallback{z-index:0}
+/* Only one actual piece is ever visible. Transparent Neo PNG pixels must
+   never reveal the old SVG underneath (that looked like a second offset piece). */
+.neo-piece-wrap .neo-piece-fallback{z-index:0;display:none}
+.neo-piece-wrap.neo-piece-failed .neo-piece-fallback{display:block}
 .neo-piece-wrap .neo-piece-image{z-index:1;image-rendering:auto}
 .neo-piece-wrap .neo-piece-image[hidden]{display:none}
 .sq .neo-piece-wrap{width:96%;height:96%;margin:auto}
