@@ -591,11 +591,18 @@ document.addEventListener('error',event=>{
  const img=event.target;
  if(!img?.classList?.contains('neo-piece-image'))return;
  const piece=img.dataset.piece;
- if(!/^[wb][kqrbnp]$/.test(piece)){img.hidden=true;return;}
+ if(!/^[wb][kqrbnp]$/.test(piece)){
+  img.hidden=true;
+  img.closest('.neo-piece-wrap')?.classList.add('neo-piece-failed');
+  return;
+ }
  if(img.dataset.mirror!=='tried'){
   img.dataset.mirror='tried';
   img.src='https://images.chesscomfiles.com/chess-themes/pieces/neo/150/'+piece+'.png';
- }else img.hidden=true;
+ }else{
+  img.hidden=true;
+  img.closest('.neo-piece-wrap')?.classList.add('neo-piece-failed');
+ }
 },true);
 document.addEventListener('change',e=>{
  if(e.target.id==='import-pgn'){loadPGNfile(e.target.files?.[0]);e.target.value='';}
