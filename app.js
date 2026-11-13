@@ -34,27 +34,109 @@ function bs(b){return b.history[b.history.length-1];}
 function makeNav(id,label,icon,badge){return `<button class="navitem ${ui.page===id?'active':''}" data-page="${id}"><span class="navicon">${icon}</span>${label}${badge?`<span class="nav-badge">${badge}</span>`:''}</button>`;}
 function wrap(body,title){
  const d=actualMastery(),credit=placementOnlyCount(),progress=percent(d,lessonOrder.length);
- $('app').innerHTML=`<div class="app"><div class="shade ${ui.menu?'open':''}" data-action="close-menu"></div><aside class="sidebar ${ui.menu?'open':''}"><div class="brand"><div class="brand-icon">♞</div><div class="brand-text"><strong>Chess Academy</strong><small>Mastery course · 2.0</small></div></div><div class="navhead">LEARN</div>
- ${makeNav('dashboard','Dashboard','⌂')}${makeNav('curriculum','My curriculum','▤')}${makeNav('placement','Placement test','◈')}${makeNav('practice','Practice','◎',dueCount())}${makeNav('openings','Opening laboratory','♗')}
- <div class="navhead">DEVELOP</div>${makeNav('analyze','Analyze games','◫')}${makeNav('play','Play Stockfish','♟')}${makeNav('progress','My progress','▥')}${makeNav('sources','Theory & sources','▣')}${makeNav('settings','Settings','⚙')}
- <div class="sidebar-bottom"><div class="side-mini"><div class="muted strong" style="font-size:11px">ACADEMY PROGRESS</div><div class="big">${progress}%</div><div class="progress-bar"><span style="width:${progress}%"></span></div><div class="little" style="margin-top:10px">${d} mastered · ${credit} placement credits · ${lessonOrder.length} lessons</div></div></div></aside>
- <div class="main"><header class="top"><div style="display:flex;align-items:center;min-width:0"><button class="mobile-toggle" data-action="menu" aria-label="Open navigation">☰</button><div class="topnav">CHESS ACADEMY &nbsp; / &nbsp; <b>${a(title)}</b></div></div><div class="topright"><span class="small-tag">♞ &nbsp; ${data.placement?'Foundation & mastery track':'Foundation-first track'}</span><button class="btn ghost small" data-page="settings" title="Manage your Chess Academy account">${accounts?.state?.selected?'☁ Synced':accounts?.state?.user?'☁ Choose sync':'♙ Account'}</button><div class="avatar">♘</div></div></header><div class="page" id="main-content">${ui.notice?`<div class="notice" role="status">${a(ui.notice)} <button class="link" data-action="dismiss">Dismiss</button></div>`:''}${body}<div class="footer">Chess Academy · Research-based curriculum, original explanations and exercises. Stockfish 19 for analysis. ${accounts?.state?.selected?'Your progress is saved on this device and synced to your account.':'Progress is saved on this device. Sign in under Settings to enable cloud sync.'}</div></div></div></div>`;
+ const accountReady=!!accounts?.state?.selected;
+ const accountLabel=accountReady?'Cloud synced':accounts?.state?.user?'Finish cloud setup':'Save progress';
+ $('app').innerHTML=`<div class="app"><div class="shade ${ui.menu?'open':''}" data-action="close-menu"></div>
+ <aside class="sidebar ${ui.menu?'open':''}" aria-label="Main navigation">
+ <button class="brand studio-brand" data-page="dashboard" aria-label="Go to Chess Academy home"><div class="studio-brand-mark">❧</div><div class="brand-text"><strong>Chess<br>Academy</strong><small>✦ MASTER YOUR GAME ✦</small></div><div class="studio-brand-mark">❧</div></button>
+ <div class="studio-nav">
+ ${makeNav('dashboard','Home','⌂')}${makeNav('curriculum','Courses','▤')}${makeNav('practice','Practice','◎',dueCount())}${makeNav('placement','Placement test','◈')}${makeNav('openings','Opening lab','♗')}
+ <div class="studio-nav-divider"></div>
+ ${makeNav('play','Play vs. AI','♞')}${makeNav('analyze','Analyze games','◫')}${makeNav('progress','My progress','▥')}${makeNav('sources','Help & theory','?')}${makeNav('settings','Settings','⚙')}
+ </div>
+ <div class="sidebar-bottom"><div class="studio-side-illustration" aria-hidden="true"><span>♜</span></div><div class="side-mini"><div class="muted strong" style="font-size:11px">YOUR MASTERY</div><div class="big">${progress}%</div><div class="progress-bar"><span style="width:${progress}%"></span></div><div class="little" style="margin-top:10px">${d} lessons mastered · ${credit} placement credits</div></div></div>
+ </aside>
+ <div class="main"><header class="top studio-top">
+ <div style="display:flex;align-items:center;min-width:0"><button class="mobile-toggle" data-action="menu" aria-label="Open navigation">☰</button><div class="topnav">CHESS ACADEMY &nbsp; / &nbsp; <b>${a(title)}</b></div></div>
+ <div class="topright"><button class="studio-sync ${accountReady?'is-synced':''}" data-page="settings" title="Manage account and saving"><span aria-hidden="true">${accountReady?'☁':'♙'}</span><span><strong>${accountLabel}</strong><small>${accountReady?'Automatic saving active':accounts?.state?.user?'Choose a progress source':'Local progress stays on this device'}</small></span></button><button class="studio-user" data-page="settings" aria-label="Account settings">♟</button></div></header>
+ <div class="page ${ui.page==='dashboard'?'study-page':''}" id="main-content">${ui.notice?`<div class="notice" role="status">${a(ui.notice)} <button class="link" data-action="dismiss">Dismiss</button></div>`:''}${body}
+ <div class="footer">Chess Academy · 40 lessons · Guided practice and Stockfish analysis. ${accountReady?'Progress sync is active.':'Progress is saved locally; connect your account in Settings for cloud sync.'}</div></div></div></div>`;
 }
 function header(eyebrow,title,sub){return `<div class="course-header"><div class="eyebrow">${a(eyebrow)}</div><h1>${a(title)}</h1>${sub?`<p class="kicker" style="margin-top:11px">${a(sub)}</p>`:''}</div>`;}
 function stats(){return `<div class="stats"><div class="stat"><span class="stat-symbol">◉</span><div class="label">Lessons mastered</div><div class="value">${percent(actualMastery(),lessonOrder.length)}%</div><div class="detail">${actualMastery()} mastered · ${placementOnlyCount()} placement credits</div></div><div class="stat"><span class="stat-symbol">◎</span><div class="label">Due reviews</div><div class="value">${dueCount()}</div><div class="detail">Spaced repetition</div></div><div class="stat"><span class="stat-symbol">✦</span><div class="label">Practice solved</div><div class="value">${Object.keys(data.practiceSolved).length}</div><div class="detail">Individual exercises</div></div><div class="stat"><span class="stat-symbol">♙</span><div class="label">Imported games</div><div class="value">${data.games.length}</div><div class="detail">PGN reviews saved</div></div></div>`;}
 function moduleCard(m,i){const count=m.ids.filter(isMastered).length;return `<button class="module-card" data-page="curriculum" data-module="${i}"><div class="module-head"><div class="module-icon">${m.icon}</div><span class="chip ${count===m.ids.length?'':'grey'}">${count===m.ids.length?'All mastered or credited':`${count} / ${m.ids.length} mastered or credited`}</span></div><h3>${a(m.name)}</h3><p>${a(m.subtitle)}</p><div class="progress-bar"><span style="width:${percent(count,m.ids.length)}%"></span></div></button>`;}
-function dashboard(){let id=nextLesson(),l=lessons.get(id),ready=canResume(id),due=dueCount();const nextReview=Object.keys(data.review).find(x=>data.review[x].due<=now());wrap(`
- <div class="hero"><div><div class="eyebrow">YOUR LEARNING PATH</div><h1>Learn deeply.<br><span class="highlight">Play with confidence.</span></h1><p class="kicker">A structured chess course that tests what you can apply, not just what you can remember. Work toward mastery at your own pace.</p></div><div class="hero-graphic"><span class="knight">♞</span><span class="ring"></span></div></div>${stats()}
- ${!data.placement?`<div class="panel" style="border-color:#597348;background:linear-gradient(120deg,#253a27,#1b2920)"><div class="eyebrow">START HERE</div><h2 style="margin:10px 0">Find your starting level</h2><p class="panel-desc">Take a short, unassisted diagnostic. Your results suggest which skills to focus on, and strong foundational answers can award placement credit.</p><button class="btn" data-action="start-placement">Take placement assessment →</button></div>`:''}
- <div class="panel" style="border-color:#4d6953"><div class="panel-title"><h3>Foundation training · prevent avoidable mistakes</h3><span class="chip gold">${foundation.filter(e=>data.practiceSolved[e.id]).length} / ${foundation.length} practiced</span></div><p class="panel-desc">Improve your consistency with short questions about safe queen moves, checks, exposed kings, and passed pawns. Begin here if you're new to rapid chess or working on one-move blunders.</p><div class="btn-row"><button class="btn secondary" data-page="practice" data-filter="foundation">Start foundation drills →</button><button class="btn ghost" data-page="analyze">Review a game →</button></div></div>
- <div class="cols-2"><div><div class="panel"><div class="panel-title"><h3>Continue your learning path</h3><span class="chip">Mastery required</span></div><div class="task-card"><div class="eyebrow">NEXT LESSON · ${lessonOrder.indexOf(id)+1} OF ${lessonOrder.length}</div><h2>${a(l.title)}</h2><p>${a(l.target)}</p><div class="btn-row"><button class="btn" data-page="lesson" data-id="${id}">Start lesson →</button><button class="btn ghost" data-page="curriculum">View curriculum</button></div></div></div><div class="panel"><div class="panel-title"><h3>Course modules</h3><button class="link" data-page="curriculum">View all →</button></div><div class="module-grid">${D.modules.map(moduleCard).join('')}</div></div></div>
- <div><div class="panel"><div class="panel-title"><h3>Practice that sticks</h3><span class="chip ${due?'gold':'grey'}">${due} due</span></div><p class="panel-desc">Missed ideas come back on a schedule. We focus on transferring knowledge into unfamiliar positions, not writing an explanation every move.</p>${nextReview?`<div class="mini-panel"><strong>${a(questions.get(nextReview)?.prompt||'Review your latest mistake')}</strong><p class="helper" style="margin-top:8px">A past concept is ready for review.</p></div>`:`<div class="mini-panel">✓ You're up to date on scheduled reviews.</div>`}<div class="btn-row" style="margin-top:15px"><button class="btn secondary" data-page="practice" data-filter="due">${due?'Review now →':'Open practice →'}</button></div></div>
- <div class="panel"><div class="panel-title"><h3>Your chess toolkit</h3></div><div class="grid-lines"><div><strong>♗ Opening laboratory</strong><p class="helper">Compare options before committing to a repertoire.</p><button class="link" data-page="openings">Explore openings →</button></div><div class="divider"></div><div><strong>◫ Analyze your games</strong><p class="helper">Import PGNs and use Stockfish to find missed chances.</p><button class="link" data-page="analyze">Open game analysis →</button></div><div class="divider"></div><div><strong>♘ Engine sparring</strong><p class="helper">Play reduced-depth Stockfish to practice under pressure.</p><button class="link" data-page="play">Play a game →</button></div></div></div></div></div>
- `,'Dashboard');}
+function recentActivity(){
+ const events=[];
+ for(const [id,v] of Object.entries(data.practiceSolved||{})){const q=questions.get(id);if(q&&Number.isFinite(v?.at))events.push({at:v.at,icon:'◎',label:'Practiced: '+(q.skill||lessons.get(q.lesson)?.title||'Chess skills')});}
+ for(const [id,v] of Object.entries(data.mastered||{})){if(Number.isFinite(v?.at))events.push({at:v.at,icon:'★',label:'Mastered: '+(lessons.get(Number(id))?.title||'Lesson '+id)});}
+ for(const [id,v] of Object.entries(data.opened||{})){if(Number.isFinite(v))events.push({at:v,icon:'▤',label:'Studied: '+(lessons.get(Number(id))?.title||'Lesson '+id)});}
+ events.sort((a,b)=>b.at-a.at);
+ return events.slice(0,4);
+}
+function activityAge(timestamp){
+ const d=Math.max(0,now()-timestamp),minute=60000,hour=60*minute,day=24*hour;
+ return d<minute?'Just now':d<hour?Math.max(1,Math.floor(d/minute))+'m ago':d<day?Math.floor(d/hour)+'h ago':d<7*day?Math.floor(d/day)+'d ago':new Date(timestamp).toLocaleDateString();
+}
+function dashboardModule(m,i){
+ const mastered=m.ids.filter(id=>!!data.mastered[id]).length,credited=m.ids.filter(id=>!!data.placementCredit[id]&&!data.mastered[id]).length;
+ const progress=percent(mastered,m.ids.length),isCurrent=m.ids.includes(nextLesson());
+ const locked=!m.ids.some(id=>unlocked(id)||isMastered(id));
+ const glyph=['♔','♘','♙','♜','♗','♕','♞'][i]||'♟';
+ return `<button type="button" class="studio-course-card ${isCurrent?'is-current':''} ${locked?'is-locked':''}" data-page="curriculum" data-module="${i}" aria-label="View ${a(m.name)} lessons">
+  <div class="studio-course-art art-${i%4}" aria-hidden="true"><span>${glyph}</span></div>
+  <div class="studio-course-copy"><div class="studio-course-heading"><strong>${a(m.name)}</strong><span class="studio-course-state">${mastered===m.ids.length?'Mastered':locked?'Upcoming':isCurrent?'In progress':mastered?'Continue':'Not started'}</span></div>
+  <p>${a(m.subtitle)}</p>
+  <div class="studio-course-progress"><span class="progress-bar"><span style="width:${progress}%"></span></span><em>${progress}%</em></div>
+  <div class="studio-course-meta"><span>▤ ${m.ids.length} lessons</span><span>◎ ${mastered} mastered</span>${credited?`<span>✧ ${credited} credited</span>`:''}</div></div>
+  <span class="studio-course-open" aria-hidden="true">${locked?'▤': '›'}</span>
+ </button>`;
+}
+function dashboard(){
+ const id=nextLesson(),l=lessons.get(id),due=dueCount(),learned=actualMastery(),total=lessonOrder.length;
+ const studied=Object.keys(data.studied||{}).length,practiced=Object.keys(data.practiceSolved||{}).length;
+ const foundationDone=foundation.filter(q=>!!data.practiceSolved[q.id]).length;
+ const recent=recentActivity(),lessonPractice=l.exercises.filter(q=>!!data.practiceSolved[q.id]).length;
+ const score=percent(learned,total);
+ const nextReview=Object.keys(data.review).find(x=>data.review[x].due<=now());
+ const heading=l.title;
+ wrap(`
+ <div class="study-dashboard">
+ <div class="study-hero" role="region" aria-label="Continue learning chess">
+  <div class="study-hero-copy"><div class="studio-eyebrow">YOUR CHESS JOURNEY</div>
+   <h1>Welcome to your<br><span>Chess Academy.</span></h1>
+   <p>Learn, practice, and improve at your own pace. Every great game begins with a good move.</p>
+   <div class="study-quick-actions">
+    <button class="study-cta primary" data-page="lesson" data-id="${id}"><span>▷</span> Continue course</button>
+    <button class="study-cta" data-page="practice" data-filter="foundation"><span>◎</span> Practice mode</button>
+    <button class="study-cta" data-page="play"><span>♞</span> Play vs. AI</button>
+    <button class="study-cta" data-page="progress"><span>▥</span> View progress</button>
+   </div>
+  </div>
+ </div>
+ ${!data.placement?`<div class="study-onboarding"><div><strong>New here? Find your starting level.</strong><p>Take a short diagnostic, or begin Lesson 1. You can always revisit credited lessons.</p></div><button class="study-cta" data-action="start-placement">Take placement assessment →</button></div>`:''}
+ <div class="study-layout">
+ <section class="study-courses studio-card" aria-labelledby="study-courses-title">
+  <div class="studio-section-heading"><div><span class="studio-heading-icon">▤</span><h2 id="study-courses-title">Your courses</h2><p>Structured lessons, guided practice, and mastery assessments.</p></div><button class="studio-text-link" data-page="curriculum">View all lessons ↗</button></div>
+  <div class="studio-course-list">${D.modules.map(dashboardModule).join('')}</div>
+  <div class="study-foundation"><div><strong>✧ Foundation training</strong><p>Build reliable habits for queen safety, blunders, king attacks and passed pawns.</p></div><span>${foundationDone}/${foundation.length} practiced</span><button class="btn secondary small" data-page="practice" data-filter="foundation">Practice →</button></div>
+ </section>
+ <aside class="study-rail">
+  <section class="studio-card study-continue"><h2><span class="studio-heading-icon">▷</span> Continue learning</h2>
+   <button class="study-continue-link" data-page="lesson" data-id="${id}">
+    <span class="study-mini-art" aria-hidden="true">♔</span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
+   </button>
+  </section>
+  <section class="studio-card study-progress"><h2><span class="studio-heading-icon">♛</span> Your progress</h2><div class="study-progress-inner">
+   <div class="study-progress-ring" role="img" aria-label="${score}% of lessons mastered" style="--mastery:${score}%"><span><strong>${score}%</strong><small>Mastered</small></span></div>
+   <div class="study-progress-stats"><span><b>▤</b> ${learned}/${total} lessons</span><span><b>◎</b> ${practiced} exercises</span><span><b>✧</b> ${studied} studied</span><span><b>♜</b> ${due} reviews due</span></div>
+  </div></section>
+  <section class="studio-card study-focus"><h2><span class="studio-heading-icon">▦</span> Today's focus</h2>
+   <button class="study-focus-task" data-page="lesson" data-id="${id}"><span class="focus-square">${data.mastered[id]?'✓':'□'}</span><span>Study ${a(l.title)}</span><span>↗</span></button>
+   <button class="study-focus-task" data-page="practice" data-filter="foundation"><span class="focus-square">${foundationDone===foundation.length?'✓':'□'}</span><span>Practice foundational skills</span><span>↗</span></button>
+   <button class="study-focus-task" data-page="practice" data-filter="due"><span class="focus-square">${due===0?'✓':'□'}</span><span>${due?'Review '+due+' due concepts':'Review schedule clear'}</span><span>↗</span></button>
+   <button class="study-focus-task" data-page="analyze"><span class="focus-square">□</span><span>Review a recent game</span><span>↗</span></button>
+  </section>
+  <section class="studio-card study-activity"><div class="studio-mini-heading"><h2><span class="studio-heading-icon">◷</span> Recent activity</h2><button class="studio-text-link" data-page="progress">View all ↗</button></div>
+    ${recent.length?recent.map(item=>`<div class="study-activity-row"><span>${item.icon}</span><strong>${a(item.label)}</strong><small>${a(activityAge(item.at))}</small></div>`).join(''):`<div class="study-empty-activity"><span>✦</span><strong>Your chess story starts here.</strong><p>Complete a lesson or puzzle to see your progress in this space.</p></div>`}
+  </section>
+ </aside>
+ </div>
+ </div>`,'Dashboard');
+}
 function lessonRow(l,i){const done=!!data.mastered[l.id],credited=!!data.placementCredit[l.id],studied=!!data.studied[l.id],lock=!unlocked(l.id)&&!isMastered(l.id),current=nextLesson()===l.id;return `<button class="lesson-row ${lock?'locked':''}" data-page="lesson" data-id="${l.id}" ${lock?'disabled':''}><div class="number ${done||credited?'complete':''}">${done?'✓':data.completed[l.id]?'✓':studied?'◉':credited?'◇':lock?'🔒':String(i+1).padStart(2,'0')}</div><div class="lesson-row-main"><strong>${a(l.title)}</strong><p>${a(l.target)}</p></div><span class="right-detail">${lessonStatus(l.id)}${current?' · Next up':''}${lock?' · Locked':''} · ${l.length} min</span></button>`;}
 function curriculum(){const q=ui.search.toLowerCase().trim();wrap(`${header('LEARNING PATH','Your curriculum','40 original lessons across seven skill domains. Each lesson includes guided study, exercises, and a mastery assessment. Lessons unlock after proven mastery.')}
  <div class="toolbar"><input id="course-search" class="input search" placeholder="Search lessons and topics…" value="${a(ui.search)}"><span class="chip">${actualMastery()} mastered · ${placementOnlyCount()} credited</span><button class="btn ghost small" data-page="placement">Placement test</button></div>
- ${D.modules.map((m,mi)=>{const ls=m.ids.map(id=>lessons.get(id)).filter(l=>!q||(l.title+' '+l.target).toLowerCase().includes(q));if(!ls.length)return '';return `<div class="panel"><div class="panel-title"><div><div class="eyebrow">MODULE ${mi+1} · ${m.ids.length} LESSONS</div><h2 style="margin-top:6px">${m.icon} &nbsp;${a(m.name)}</h2><p class="helper" style="margin-top:7px">${a(m.subtitle)}</p></div><span class="chip">${m.ids.filter(isMastered).length} / ${m.ids.length}</span></div><div class="lesson-list">${ls.map(l=>lessonRow(l,lessonOrder.indexOf(l.id))).join('')}</div></div>`}).join('')}
+ ${D.modules.map((m,mi)=>{const ls=m.ids.map(id=>lessons.get(id)).filter(l=>!q||(l.title+' '+l.target).toLowerCase().includes(q));if(!ls.length)return '';return `<div class="panel" id="module-${mi}"><div class="panel-title"><div><div class="eyebrow">MODULE ${mi+1} · ${m.ids.length} LESSONS</div><h2 style="margin-top:6px">${m.icon} &nbsp;${a(m.name)}</h2><p class="helper" style="margin-top:7px">${a(m.subtitle)}</p></div><span class="chip">${m.ids.filter(isMastered).length} / ${m.ids.length}</span></div><div class="lesson-list">${ls.map(l=>lessonRow(l,lessonOrder.indexOf(l.id))).join('')}</div></div>`}).join('')}
  `,'Curriculum');}
 function boardHTML(b,{small=false,viewOnly=false}={}){
  if(!b)return '';
