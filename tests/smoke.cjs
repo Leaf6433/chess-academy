@@ -199,6 +199,7 @@ for(let id=1;id<=40;id++){
  const quest=masteryConcepts.filter(q=>q.lesson===id);
  const board=masteryBoards.find(q=>q.lesson===id);
  assert(guide?.topics?.length===3,'Three extended lesson topics '+id);
+ assert(guide.pitfall?.length>45,'Each lesson has a realistic mistake to avoid '+id);
  assert(guide.topics.every(q=>q.explanation?.length>100&&q.prompt&&q.answer),'Each topic needs instructive content and an answer '+id);
  assert(sample?.line?.length>0,'Interactive second board example '+id);
  assert.equal(quest.length,4,'Four new reasoning questions '+id);
@@ -213,6 +214,7 @@ for(let id=1;id<=40;id++){
   t.data.mastered[prereq] ||= {at:Date.now()};
  }
  nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ assert(app.innerHTML.includes('Common mistake to avoid'),'Lesson-specific mistake guidance visible '+id);
  assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
  press('start-mastery');
  assert.equal(t.ui.exam.items.length,5,'Five new assessment questions for lesson '+id);
