@@ -1,4 +1,4 @@
-/* Beginner reinforcement drills — original questions. Some positions are from the learner's uploaded PGN, anonymized. */
+/* Beginner reinforcement drills — original content. Some positions are from the learner's uploaded PGN, anonymized. */
 window.FOUNDATION_DRILLS=[
   {
     "id": "F01",
@@ -227,5 +227,31 @@ window.FOUNDATION_DRILLS=[
     "priority": 1,
     "skill": "Blunder prevention",
     "foundation": true
+  },
+  {
+    "id": "F13",
+    "lesson": 1,
+    "kind": "board",
+    "foundation": true,
+    "skill": "Queen safety",
+    "priority": 1,
+    "fen": "1rbq1rk1/2p2p2/p4b1p/8/P5Q1/1P3N2/2P2PPP/R1B2RK1 b - - 1 17",
+    "answer": "c8g4",
+    "prompt": "From Game 1: Black to move. White's queen has checked on g4. Find the capture that wins the queen.",
+    "explanation": "The bishop from c8 captures the checking queen on g4. This is why checks must be tested for captures.",
+    "hint": "Look for a black bishop attacking the queen from a long diagonal."
+  },
+  {
+    "id": "F14",
+    "lesson": 1,
+    "kind": "board",
+    "foundation": true,
+    "skill": "Queen safety",
+    "priority": 1,
+    "fen": "8/8/p1kQ1np1/1p1p3p/8/2N5/PPb2PPP/5RK1 b - - 0 21",
+    "answer": "c6d6",
+    "prompt": "From Game 5: Black to move. White's queen just captured on d6 with check. Find the legal king capture.",
+    "explanation": "Black's king captures the queen with ...Kxd6. Always check whether an opposing king can safely capture your checking piece.",
+    "hint": "Look at the black king on c6."
   }
 ];
