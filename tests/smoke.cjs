@@ -240,4 +240,46 @@ for(let id=1;id<=40;id++){
  assert(app.innerHTML.includes('MASTERY RESULTS'),'Mastery result displayed '+id);
 }
 
+
+// The Stockfish result belongs to its board column, not beneath a whole lesson/page.
+function showLocalStockfish(){
+ const fen=t.C.toFen(t.ui.board.history.at(-1));
+ t.ui.engineResult={fen,bestmove:t.C.legal(t.ui.board.history.at(-1)).length?t.C.uci(t.C.legal(t.ui.board.history.at(-1))[0]):'',score:23,scoreType:'cp',depth:8,mode:'lite',pv:[]};
+ t.render();
+ assert.equal((app.innerHTML.match(/id="engine-response"/g)||[]).length,1,'Exactly one analysis result is visible');
+ assert(app.innerHTML.includes('class="panel stockfish-inline"'),'Stockfish uses its compact board-attached panel');
+ return app.innerHTML;
+}
+nav('lesson',1);
+let local=showLocalStockfish();
+assert(local.indexOf('id="engine-response"')>local.indexOf('class="lesson-workshop-board"'),'Lesson result is inside board workshop');
+assert(local.indexOf('id="engine-response"')<local.indexOf('class="lesson-workshop-guide"'),'Lesson result appears before adjacent guidance, not beneath the full lesson');
+assert(local.indexOf('id="engine-response"')<local.indexOf('class="panel lesson-reading-panel lesson-theory"'),'Lesson result is before deep reading');
+press('board-next');
+assert(!app.innerHTML.includes('id="engine-response"'),'Old Stockfish result disappears after a move');
+t.ui.engineResult=null;
+t.ui.engineBusy=true;t.render();
+assert(app.innerHTML.includes('Analyzing this position'),'Stockfish processing status is shown next to board');
+t.ui.engineBusy=false;t.ui.engineResult=null;
+press('lesson-phase',{phase:'practice'});
+local=showLocalStockfish();
+assert(local.indexOf('id="engine-response"')>local.indexOf('Lesson model position'),'Lesson-practice result appears inside the model panel');
+assert(local.indexOf('id="engine-response"')<local.indexOf('</div></div>')||local.indexOf('id="engine-response"')>0,'Result exists once inside board panel');
+nav('openings');
+local=showLocalStockfish();
+assert(local.indexOf('id="engine-response"')>local.indexOf('MODEL LINE'),'Opening result is beside the explored line');
+assert(local.indexOf('id="engine-response"')<local.indexOf('STRATEGY'),'Opening result is before its strategy panel');
+press('start-opening-drill');
+assert(!app.innerHTML.includes('id="engine-response"'),'No engine hint appears during recall drill');
+nav('analyze');press('sample-pgn');
+local=showLocalStockfish();
+assert(local.indexOf('id="engine-response"')>local.indexOf('Analyze this position'),'Game review result sits below its board tools');
+assert(local.indexOf('id="engine-response"')<local.indexOf('IMPORTED GAME'),'Game review result does not render at page bottom');
+press('game-ply',{ply:'1'});
+assert(!app.innerHTML.includes('id="engine-response"'),'Changing PGN ply clears the result');
+nav('play');
+local=showLocalStockfish();
+assert(local.indexOf('id="engine-response"')>local.indexOf('Analyze position'),'Play result appears under board actions');
+assert(local.indexOf('id="engine-response"')<local.indexOf('ENGINE OPPONENT'),'Play result is not appended below the whole screen');
+t.ui.engineResult=null;
 console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings, forty detailed lessons, forty independent mastery assessments');
