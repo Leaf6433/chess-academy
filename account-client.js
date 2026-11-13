@@ -10,6 +10,12 @@
   const state = {available: false, user: null, remote: null, selected: false, status: 'off', message: '', saving: false, recovery: false};
   let client = null, notify = () => {}, applyData = () => {}, getData = () => null, pending = null, suppress = false;
   const email = () => state.user && state.user.email || '';
+  const SYNC_KEY='chess.academy.cloud.known-v1';
+  const snapshot=()=>JSON.stringify(getData());
+  function trusted(){try{return JSON.parse(root.localStorage?.getItem(SYNC_KEY)||'null');}catch(e){return null;}}
+  function remember(){if(!state.user||!state.remote)return;try{root.localStorage?.setItem(SYNC_KEY,JSON.stringify({userId:state.user.id,revision:state.remote.revision,data:snapshot()}));}catch(e){}}
+  function clearKnown(){try{root.localStorage?.removeItem(SYNC_KEY);}catch(e){}}
+
   function announce(status, message = '') {state.status = status;state.message = message;notify();}
   function errorMessage(error) {return String(error?.message || error || 'An unexpected error occurred.').slice(0, 260);}
   function copyPayload() {return JSON.parse(JSON.stringify(getData()));}
@@ -34,13 +40,25 @@
     const next = session?.user || null;
     if (next?.id === state.user?.id && event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION')return;
     if (!next) {
-      state.user=null;state.remote=null;state.selected=false;pending=null;state.recovery=false;
+      state.user=null;state.remote=null;state.selected=false;
+      if(pending)clearTimeout(pending);pending=null;state.recovery=false;
       announce('signed-out');return;
     }
     if (next.id !== state.user?.id) {state.selected=false;state.remote=null;pending=null;}
     state.user = next;
     announce('loading','Checking cloud progress…');
-    try {await refreshRemote();if(state.user?.id !== next.id)return;announce(state.selected?'ready':'choose',state.remote?'Choose which progress to keep.':'No cloud progress exists yet. You can upload this device.');}
+    try {
+      await refreshRemote();if(state.user?.id !== next.id)return;
+      const mark=trusted();
+      // A previously chosen device/account pair can resume automatically when
+      // it is unchanged locally. New accounts and unsynced local edits require choice.
+      if(state.remote&&mark?.userId===next.id&&mark.data===snapshot()){
+        if(state.remote.revision!==mark.revision){
+          suppress=true;try{applyData(JSON.parse(JSON.stringify(state.remote.payload)));}finally{suppress=false;}
+        }
+        state.selected=true;remember();announce('ready','Cloud progress connected. Changes sync automatically.');
+      }else announce(state.selected?'ready':'choose',state.remote?'Choose which progress to keep.':'No cloud progress exists yet. You can upload this device.');
+    }
     catch(err) {if(state.user?.id === next.id)announce('error', 'Could not load cloud progress: '+errorMessage(err));}
   }
   async function init(callbacks={}) {
@@ -85,7 +103,7 @@
     try{const {error}=await client.auth.updateUser({password:newPassword});if(error)throw error;state.recovery=false;announce(state.selected?'ready':'choose','Password updated.');}
     catch(err){announce('error',errorMessage(err));}
   }
-  async function signOut(){if(!client)return;try{const {error}=await client.auth.signOut();if(error)throw error;announce('signed-out','Signed out. Device progress was not erased.');}catch(err){announce('error',errorMessage(err));}}
+  async function signOut(){if(!client)return;try{if(pending)clearTimeout(pending);pending=null;clearKnown();const {error}=await client.auth.signOut();if(error)throw error;announce('signed-out','Signed out. Device progress was not erased.');}catch(err){announce('error',errorMessage(err));}}
   async function useCloud(){
     try{
       assertAuth();
@@ -94,7 +112,7 @@
       const incoming=JSON.parse(JSON.stringify(row.payload));
       suppress=true;
       try{applyData(incoming);}finally{suppress=false;}
-      state.selected=true;
+      state.selected=true;remember();
       announce('ready','Cloud progress loaded onto this device. Automatic sync is on.');
     }catch(err){announce('error',errorMessage(err));}
   }
@@ -111,7 +129,7 @@
       else result=await client.from('chess_academy_progress').update({payload:snapshot,revision:row.revision+1,updated_at:new Date().toISOString()}).eq('user_id',state.user.id).eq('revision',row.revision).select('user_id,payload,revision,updated_at').maybeSingle();
       if(result.error)throw result.error;
       if(!result.data){state.selected=false;announce('conflict','Cloud progress changed on another device. Choose which version to keep.');return;}
-      state.remote=ensureRevision(result.data);state.selected=true;announce('ready','Saved in your account. Automatic sync is on.');
+      state.remote=ensureRevision(result.data);state.selected=true;remember();announce('ready','Saved in your account. Automatic sync is on.');
     }catch(err){state.selected=false;announce('error','Cloud upload failed: '+errorMessage(err));}
     finally{state.saving=false;}
   }
@@ -127,7 +145,7 @@
       if(error)throw error;
       if(!data){state.selected=false;announce('conflict','Cloud data changed on another device. Your local progress is safe. Choose which copy to keep.');return;}
       if(state.user?.id!==userId)return;
-      state.remote=ensureRevision(data);announce('ready','Synced just now.');
+      state.remote=ensureRevision(data);remember();announce('ready','Synced just now.');
       // If the learner saved again during this request, sync that latest snapshot too.
       if(JSON.stringify(getData())!==JSON.stringify(local))changed();
     }catch(err){announce('error','Progress remains saved on this device. Cloud sync failed: '+errorMessage(err));}
@@ -138,6 +156,7 @@
     if(pending)clearTimeout(pending);
     pending=setTimeout(autosave,1300);
   }
+  root.addEventListener?.('online',()=>{if(state.selected)changed();});
   const api={state,init,signIn,signUp,signOut,resetPassword,updatePassword,useCloud,uploadDevice,changed,email};
   root.ChessAcademyAccounts=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
