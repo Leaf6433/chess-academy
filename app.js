@@ -1,14 +1,14 @@
 /* Chess Academy 2 — original browser learning platform. Stockfish.js engine is third-party GPLv3. */
 (()=>{
 'use strict';
-const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],engine=new window.EngineService();
+const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],masteryBoards=window.CHESS_ACADEMY_MASTERY_BOARDS||[],masteryConcepts=window.CHESS_ACADEMY_MASTERY_CONCEPTS||[],engine=new window.EngineService();
 if(!C||!D)throw Error('Missing Chess Academy course dependencies.');
 const STORAGE='chess.academy.v2.progress';
 const $=id=>document.getElementById(id);
 const escapeHTML=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const a=x=>escapeHTML(x);
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),questions=new Map([...D.exercises,...foundation].map(e=>[e.id,e]));
+const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),questions=new Map([...D.exercises,...foundation,...masteryBoards,...masteryConcepts].map(e=>[e.id,e]));
 const starter=()=>({version:2,mastered:{},placementCredit:{},opened:{},studied:{},completed:{},attempts:{},review:{},practiceSolved:{},lastLesson:1,placement:null,starred:[],repertoire:[],openingDrills:{},games:[],journal:[],settings:{mode:'lite',depth:11,reviewLimit:40},created:Date.now()});
 function load(){try{const raw=JSON.parse(localStorage.getItem(STORAGE));if(raw?.version===2)return {...starter(),...raw,opened:{...(raw.opened||raw.studied||{})},studied:raw.opened?raw.studied||{}:{},completed:raw.completed||{},settings:{...starter().settings,...raw.settings}};}catch(e){}const first=starter();try{const older=JSON.parse(localStorage.getItem('chess.academy.800-1200.progress.v1'));if(older){first.studied=Object.fromEntries((older.completed||[]).map(x=>[x,Date.now()]));first.lastLesson=Number(older.recent)||1;}}catch(e){}return first;}
 let data=load();
@@ -278,7 +278,7 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
  if(ui.phase==='practice'){
   const lqs=l.exercises;
   const solved=lqs.filter(e=>!!data.practiceSolved[e.id]).length;
-  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Solve the concept checks. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">Passing requires at least 80% without hints, including any board-move questions. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div></div>${ui.engineResult?engineResponse():''}`,'Lesson');
+  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Solve the concept checks. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">The mastery check uses five new challenges. Pass at least four of five, including the interactive board move, without hints. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div></div>${ui.engineResult?engineResponse():''}`,'Lesson');
  }
  return wrap(top,'Lesson');
 }
@@ -365,7 +365,15 @@ function startAssessment(kind,id=null){
   items=[1,2,3,4,5,6,7,9,10,11,12,14,15,17,18,20,21,24,27,29,30,31,35,36,37,39,40].map(id=>lessons.get(id).exercises[0]);
  }else{
   const l=lessons.get(Number(id));if(!l)return;if(!canResume(l.id))return;
-  items=l.exercises.slice();
+  // Assessment is a transfer test, NOT a replay of guided practice.
+  // Four new conceptual scenarios come first, then one new interactive move.
+  const independent=masteryConcepts.filter(q=>q.lesson===l.id);
+  const applied=masteryBoards.filter(q=>q.lesson===l.id);
+  if(independent.length!==4||applied.length!==1){
+   ui.notice='This lesson’s independent mastery test is unavailable. Guided practice is still available.';
+   return render();
+  }
+  items=[...independent,...applied];
  }
  ui.exam={kind,lessonId:id,items,index:0,results:[],answered:null,showReview:false};ui.page=kind==='placement'?'placement':'lesson';if(kind==='mastery')ui.phase='mastery';setupExamBoard();render();
 }
@@ -376,7 +384,7 @@ function finishAssessment(){const ex=ui.exam;if(!ex)return;
  ex.showReview=true;
  const score=ex.results.filter(x=>x.ok).length,total=ex.results.length,ratio=score/total;
  if(ex.kind==='mastery'){
-  const l=lessons.get(ex.lessonId),hasBoard=l.exercises.some(e=>e.kind==='board');
+  const l=lessons.get(ex.lessonId),hasBoard=ex.items.some(e=>e.kind==='board');
   const missedBoard=hasBoard&&ex.results.some(r=>questions.get(r.id).kind==='board'&&!r.ok);
   ex.passed=ratio>=.8&&!missedBoard;
   data.attempts[l.id]=[...(data.attempts[l.id]||[]),{time:now(),correct:score,total,passed:ex.passed}].slice(-20);
@@ -409,7 +417,7 @@ function assessmentPage(pre=''){
  const title=x.kind==='placement'?'Placement assessment':'Lesson mastery assessment';
  const progressMeter=x.items.map((q,i)=>`<span class="${i<x.results.length?(x.results[i].ok?'good':'wrong'):''}"></span>`).join('');
  return `${pre||header('DIAGNOSTIC','Find your strengths','Answer without hints. Your score will help choose a sensible starting point.')}
- <div class="cols-2"><div class="panel"><div class="eyebrow">QUESTION ${x.index+1} OF ${x.items.length}</div><div class="test-meter">${progressMeter}</div><h2 style="margin:15px 0">${a(q.prompt)}</h2>${q.kind==='mc'?controls:''}${answered?`<div class="feedback ${x.answered?'':'bad'}">${x.answered?'✓ Correct.':'Not quite.'} ${a(q.explanation)}</div><button class="btn" data-action="exam-next">${x.index===x.items.length-1?'See my results →':'Next question →'}</button>`:'<p class="helper" style="margin-top:10px">Choose carefully. No hints in assessments.</p>'}</div><div><div class="panel"><div class="eyebrow">${q.kind==='board'?'INTERACTIVE POSITION':'CONCEPT CHECK'}</div>${conceptOrBoard(q)}</div>${x.kind==='placement'?'<p class="helper">This assessment covers a broad range of topics, so tougher questions are normal.</p>':''}</div></div>`;
+ <div class="cols-2"><div class="panel">${x.kind==='mastery'?'<p class="helper">Five new questions and positions—not the guided practice answers. No hints or engine evaluation.</p>':''}<div class="eyebrow">QUESTION ${x.index+1} OF ${x.items.length}</div><div class="test-meter">${progressMeter}</div><h2 style="margin:15px 0">${a(q.prompt)}</h2>${q.kind==='mc'?controls:''}${answered?`<div class="feedback ${x.answered?'':'bad'}">${x.answered?'✓ Correct.':'Not quite.'} ${a(q.explanation)}</div><button class="btn" data-action="exam-next">${x.index===x.items.length-1?'See my results →':'Next question →'}</button>`:'<p class="helper" style="margin-top:10px">Choose carefully. No hints in assessments.</p>'}</div><div><div class="panel"><div class="eyebrow">${q.kind==='board'?'INTERACTIVE POSITION':'CONCEPT CHECK'}</div>${conceptOrBoard(q)}</div>${x.kind==='placement'?'<p class="helper">This assessment covers a broad range of topics, so tougher questions are normal.</p>':''}</div></div>`;
 }
 function placement(){if(ui.exam?.kind==='placement')return wrap(assessmentPage(),'Placement');const previous=data.placement;
  wrap(`${header('PERSONALIZED ENTRY','Placement assessment','An unassisted diagnostic helps locate your strengths. It is not an official chess rating.')}
