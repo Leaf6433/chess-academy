@@ -19,11 +19,11 @@ const ui={preview:null,page:'dashboard',id:1,phase:'read',lessonScene:0,board:nu
 const now=()=>Date.now();
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify(data));accounts?.changed();}catch(err){ui.notice='Browser storage is unavailable or full. Export your progress regularly.';}}
 function isMastered(id){return !!data.mastered[id]||!!data.placementCredit[id];}
-function lessonStatus(id){return data.mastered[id]?'Mastered':data.completed[id]?'Completed · mastery pending':data.studied[id]?'Studied · practice pending':data.placementCredit[id]?'Placement credit · not studied':'Not studied';}
+function lessonStatus(id){const l=lessons.get(Number(id)),practiceDone=l&&lessonExercises(l).every(q=>!!data.practiceSolved[q.id]);return data.mastered[id]?'Mastered':practiceDone?'Practice completed · mastery pending':data.studied[id]?'Studied · practice pending':data.placementCredit[id]?'Placement credit · not studied':'Not studied';}
 function allMastered(){return lessonOrder.filter(isMastered).length;}
 function actualMastery(){return lessonOrder.filter(id=>!!data.mastered[id]).length;}
 function placementOnlyCount(){return lessonOrder.filter(id=>!data.mastered[id]&&!!data.placementCredit[id]).length;}
-function nextLesson(){return lessonOrder.find(id=>!data.mastered[id])||lessonOrder[lessonOrder.length-1];}
+function nextLesson(){const chosen=Number(data.lastLesson);return lessons.has(chosen)&&!data.mastered[chosen]?chosen:lessonOrder.find(id=>!data.mastered[id])||lessonOrder[lessonOrder.length-1];}
 function unlocked(id){return lessons.has(Number(id));}
 function canResume(id){return unlocked(id);}
 function dueCount(){return Object.values(data.review).filter(x=>x.due<=now()).length;}
@@ -303,7 +303,7 @@ function loadLessonScene(index){
  ui.engineResult=null;render();
 }
 function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=lessonExercises(l).length;
- const top=`${header(`MODULE ${l.module+1} / LESSON ${index+1}`,l.title,l.target)}<div class="btn-row" style="margin:-4px 0 18px"><span class="chip ${done?'':'gold'}">${done?'✓ Mastered':data.completed[l.id]?'✓ Practice completed · mastery pending':data.studied[l.id]?'◉ Studied · mastery pending':data.placementCredit[l.id]?'◇ Placement credit · not studied':'Mastery required'}</span><span class="chip grey">${l.length} min target · ${qCount} checks</span><button class="btn ghost small" data-page="curriculum">← All lessons</button></div>
+ const top=`${header(`MODULE ${l.module+1} / LESSON ${index+1}`,l.title,l.target)}<div class="btn-row" style="margin:-4px 0 18px"><span class="chip ${done?'':'gold'}">${done?'✓ Mastered':lessonExercises(l).every(q=>!!data.practiceSolved[q.id])?'✓ Practice completed · mastery pending':data.studied[l.id]?'◉ Studied · mastery pending':data.placementCredit[l.id]?'◇ Placement credit · not studied':'Mastery required'}</span><span class="chip grey">${l.length} min target · ${qCount} checks</span><button class="btn ghost small" data-page="curriculum">← All lessons</button></div>
  <div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
