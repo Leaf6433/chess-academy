@@ -237,3 +237,13 @@ h1,h2,h3{letter-spacing:-.45px}
 .studio-course-art .neo-piece-wrap{width:86px;height:86px;z-index:1;filter:drop-shadow(0 7px 7px #0008)}
 .study-mini-art .neo-piece-wrap{width:65px;height:65px}
 @media(max-width:600px){.studio-course-art .neo-piece-wrap{width:66px;height:75px}.study-mini-art .neo-piece-wrap{width:58px;height:58px}}
+
+/* Inline teaching glossary: define terminology before assessing it. */
+.lesson-vocabulary{border:1px solid #766642;background:linear-gradient(135deg,#2d3425,#1d291f);border-radius:13px;padding:18px 20px;margin:22px 0}
+.lesson-vocabulary h3{font-size:19px;color:#f2e2bf;margin:6px 0}
+.lesson-vocabulary .helper{font-size:12px;margin:0 0 15px}
+.lesson-vocabulary dl{margin:0;display:grid;gap:0}
+.lesson-vocabulary dl>div{padding:10px 0;border-top:1px solid #4f563e}
+.lesson-vocabulary dt{font-weight:800;color:#e9ca91;font-size:13px;text-transform:capitalize;margin-bottom:4px}
+.lesson-vocabulary dd{color:#e1e5d4;font-size:13px;line-height:1.65;margin:0}
+@media(max-width:560px){.lesson-vocabulary{padding:15px 14px}}
