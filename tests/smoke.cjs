@@ -144,11 +144,11 @@ nav('lesson',2);assert.equal(t.data.studied[2],undefined,'Opening a lesson alone
 press('lesson-phase',{phase:'practice'});assert(t.data.studied[2],'Entering practice marks study');
 
 // Chess vocabulary and placement diagnostics should teach, not rely on unexplained jargon.
-nav('lesson',15);
+t.ui.page='lesson';t.ui.id=15;t.ui.phase='read';t.render();
 assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'));
 assert(app.innerHTML.includes('Opposition'));
 assert(app.innerHTML.includes('with exactly one empty square between them'));
-nav('lesson',25);
+t.ui.id=25;t.render();
 assert(app.innerHTML.includes('Tempo'));
 assert(app.innerHTML.includes('does not change the clock'));
 const kingQuestion=t.D.exercises.find(q=>q.id==='P18');
