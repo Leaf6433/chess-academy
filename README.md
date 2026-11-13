@@ -9,16 +9,26 @@ With the site owner's confirmation of permission to use the Chess.com Neo artwor
 - The chess rules, board layout, accounts, and existing browser progress data are unchanged.
 - Test that `wk.png` and `bk.png` appear correctly in a browser after the latest GitHub Pages deployment. Headless DOM tests verify URL wiring, but cannot guarantee third-party CDN accessibility in each browser.
 
+## Full-length lessons and independent mastery — November 13, 2026
+
+All **40 lessons** now feature three expanded theory sections (120 new teaching sections), three reflective practice prompts with revealable answers, a lesson-specific common mistake, two interactive board demonstrations (the original model and a distinct new position), and an estimated **25-minute suggested study route**: 5 minutes for the core explanation, 9 for deeper instruction, 6 for the boards and 5 for recall/guided practice. This is a **suggested pace**, not a timer or a guarantee of exact reading duration.
+
+- Existing **121 guided practice exercises** remain available with hints and feedback.
+- Each lesson now has a **different five-item mastery check**: four new scenario questions and one new interactive board challenge. A learner must get at least four correct **and** solve the board challenge to pass. The 200 mastery items use distinct IDs and are not copied from guided practice; the 40 move challenges are legal and separately validated.
+- The optional placement assessment keeps its original questions and scope.
+- The Stockfish evaluation bar appears in lesson study, opening exploration and game review, but remains hidden during mastery checks, placement, puzzles and recall drills.
+- Automated regression checks visit all 40 lessons, verify the extended content and both board examples, answer all 40 independent mastery assessments, and check results and evaluation privacy. Separate account and Stockfish integration tests remain.
+
 ## Release polish — November 13, 2026
 
 This release focuses on learning continuity and reliability:
 
 - **Learn → Practice → Master:** Every lesson has a guided example board, key takeaways, a quick notation guide, a clearly presented practice plan, and links into its own exercises. After each solved position, a learner can proceed to the next unsolved question or return to the lesson overview. When a lesson's practice is finished, the mastery check is the natural next step.
-- **New board pieces:** All full interactive chessboards use a single 12-piece custom SVG set, recreated with classic rounded Neo/Staunton forms, strong contrast, and the green-and-cream board palette shown in the reference. The assets are original and not the Chess.com proprietary files.
+- **New board pieces:** Chess Academy uses the official Chess.com Neo artwork, with a cached custom SVG fallback if the external official PNG cannot be loaded.
 - **Accounts:** Auth uses the configured Supabase project. A device may resume automatic sync after its owner has explicitly selected a progress copy once and the local data matches the last known sync. Local or cloud divergence requires an explicit choice; local data is never silently discarded.
 - **Better user-facing status:** Header, footer, and settings describe account sync accurately, rather than claiming there is no cloud functionality.
 - **Offline updates:** HTML, JavaScript, and CSS load from the network first when available, falling back to the cached copy while offline. Assets and service worker are release-versioned.
-- **Regression gates:** Website smoke tests, account lifecycle, persistent account sync, and Stockfish UCI integration must succeed before the GitHub Pages workflow publishes. The first three can also be simulated without a browser; live browser and GitHub Pages health are still independent checks.
+- **Regression gates:** Website smoke tests, account lifecycle and persistent account sync must succeed before GitHub Pages publishes. Stockfish UCI is tested independently and reported but does not block deployment if the command-line environment has a problem. The first three can also be simulated without a browser; live browser and GitHub Pages health are still independent checks.
 
 **Launch verification:** GitHub Actions must show a green **Publish Chess Academy** run. Afterward reload the published site, confirm the revised pieces, open a lesson and complete a practice question, test Stockfish from Settings, and verify signed-in cloud progress with a backup. Do not clear browser site data.
 
@@ -53,7 +63,7 @@ Serve all the files over HTTPS. **Lite Stockfish** runs without special isolatio
 
 ## Progress and privacy
 
-Progress is stored **only in this browser's localStorage**. It does **not** sync automatically across devices yet. Use **Settings → Export progress**, then import the JSON backup on the other device to transfer your data. Use the same browser and localhost port if possible to keep your storage consistent. Browser-data clearing can erase progress if you haven't exported it.
+Progress is first stored in this browser's localStorage. Optional Supabase account sync is available after signing in and explicitly choosing which progress copy to use; the system detects conflicting local and cloud changes before replacing data. You can export a JSON backup in Settings. Clearing browser data may erase unsynced progress, so keep a backup even if you use cloud sync.
 
 ## About Stockfish
 
@@ -64,7 +74,7 @@ Progress is stored **only in this browser's localStorage**. It does **not** sync
 
 ## What's included and not included
 
-**Included:** functional move-legality engine, progression and retry tests, opening practice, PGN mainline importer, local engine connection, sourced course content, backup/export tools, coursebook PDF and source notices. **Not yet included:** cloud login/synchronization, personalized natural-language AI tutor, all-variations PGN support, a complete real-time opening statistics database, or an unlimited auto-generated curriculum.
+**Included:** functional move-legality engine, progression and retry tests, opening practice, PGN mainline importer, local engine connection, sourced course content, backup/export tools, coursebook PDF and source notices. **Not yet included:** additional cloud login/synchronization, personalized natural-language AI tutor, all-variations PGN support, a complete real-time opening statistics database, or an unlimited auto-generated curriculum.
 
 ## Visual teaching and placement progress (November 2026 update)
 
