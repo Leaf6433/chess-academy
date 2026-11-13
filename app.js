@@ -487,7 +487,7 @@ function nav(page,arg=null){if(page==='lesson')return initLesson(Number(arg||nex
  if(page==='analyze'&&!ui.board)initGame();
  if(page==='play'){ui.board=makeBoard(C.START_FEN,[],'play');ui.playing=false;ui.playDepth=ui.playDepth||5;}
  if(page==='openings'){ui.board=null;ui.openingPhase='explore';}
- render();window.scrollTo?.({top:0,behavior:'instant'});
+ render();if(page==='curriculum'&&arg!=null){const dest=document.getElementById?.('module-'+ui.moduleOpen);if(dest?.scrollIntoView)dest.scrollIntoView({block:'start',behavior:'smooth'});else window.scrollTo?.({top:0,behavior:'instant'});}else window.scrollTo?.({top:0,behavior:'instant'});
 }
 function chooseSquare(i){const b=ui.board;if(!b)return;if(b.kind==='opening-drill'&&b.moves.length===b.sequence.length)return;const s=bs(b),legal=C.legal(s);
  if((ui.exam&&!ui.exam.showReview&&ui.exam.answered!==null)||ui.playing)return;
