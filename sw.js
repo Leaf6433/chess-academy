@@ -1,5 +1,5 @@
 /* Chess Academy offline shell: fresh app code when online, cached fallback when offline. */
-const NAME='chess-academy-inclusive-lesson-2026-11-13-v1';
+const NAME='chess-academy-evaluation-and-mastery-fix-2026-11-13-v1';
 const CORE=['./','./index.html','./styles.css','./app.js','./chess-engine.js','./course-data-v2.js','./foundation-drills.js','./engine-service.js','./supabase-config.js','./account-client.js','./manifest.webmanifest','./assets/favicon.svg','./assets/pieces.svg','./assets/study-hero.svg'];
 self.addEventListener('install',event=>event.waitUntil(
  caches.open(NAME).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())
