@@ -30,6 +30,8 @@ assert(!app.innerHTML.includes('Lessons unlock after proven mastery'),'Curriculu
 nav('lesson',40);
 assert.equal(t.ui.page,'lesson','Lesson 40 can open without earlier mastery');
 assert.equal(t.ui.id,40,'Requested lesson selected');
+nav('dashboard');assert(app.innerHTML.includes('data-page="lesson" data-id="40"'),'Dashboard continues the chosen, unfinished lesson');
+nav('lesson',40);
 assert(!t.data.mastered[1],'Earlier lesson not automatically mastered');
 press('start-mastery');
 assert.equal(t.ui.exam.kind,'mastery','Lesson 40 mastery can open out of order');
@@ -222,6 +224,8 @@ for(let id=1;id<=40;id++){
  const board=masteryBoards.find(q=>q.lesson===id);
  assert(guide?.topics?.length===3,'Three extended lesson topics '+id);
  assert.equal(boardDrills.practice.filter(q=>q.lesson===id).length,2,'Two hands-on guided practice boards for lesson '+id);
+ const guided=[...boardDrills.practice.filter(q=>q.lesson===id),...t.D.lessons.find(l=>l.id===id).exercises.filter(q=>q.kind==='board'),...t.D.lessons.find(l=>l.id===id).exercises.filter(q=>q.kind==='mc').slice(0,1)];
+ assert(guided.filter(q=>q.kind==='board').length>guided.filter(q=>q.kind==='mc').length,'Guided practice uses more board moves than MC: '+id);
  assert.equal(boardDrills.mastery.filter(q=>q.lesson===id).length,2,'Two extra hands-on mastery boards for lesson '+id);
  const allPositions=[...boardDrills.practice.filter(q=>q.lesson===id),board,...boardDrills.mastery.filter(q=>q.lesson===id)];
  for(const p of allPositions){assert.equal(p.kind,'board');assert(t.C.fromUci(t.C.parseFen(t.exFen(p)),p.answer),'Legal board move '+p.id);}
