@@ -350,3 +350,17 @@ h1,h2,h3{letter-spacing:-.45px}
  .lesson-wrapup .lesson-takeaways{grid-template-columns:1fr}
  .lesson-reading-panel h2{font-size:23px}
 }
+
+/* Stockfish belongs next to the current chessboard, never under the whole lesson. */
+.stockfish-inline{min-width:0;width:100%;margin:15px 0 0;padding:17px 18px;background:linear-gradient(155deg,#24362a,#18271f);border:1px solid #556d52;border-radius:13px}
+.stockfish-inline .panel-title{align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:13px}
+.stockfish-inline .panel-title h3{font-size:15px;line-height:1.4;margin:0}
+.stockfish-inline .chip{font-size:10px}
+.stockfish-details{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.stockfish-details>div{min-width:0}
+.stockfish-details>div+div{border-top:1px solid #4d614d;padding-top:12px}
+.stockfish-inline h2{font-size:22px!important;margin:6px 0 9px!important}
+.stockfish-inline .panel-desc,.stockfish-inline .helper{font-size:12px;line-height:1.65}
+.stockfish-inline .panel-desc{margin:10px 0 0}
+.stockfish-inline .engine-result{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.7;font-size:12px}
+@media(max-width:560px){.stockfish-inline{padding:13px 12px}.stockfish-inline .panel-title h3{font-size:14px}}
