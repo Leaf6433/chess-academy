@@ -223,3 +223,14 @@ h1,h2,h3{letter-spacing:-.45px}
 .page .footer{border-top:1px solid #41483b;padding-top:17px;color:#929a85}
 @media(max-width:880px){.page:not(.study-page){padding:25px 17px 55px}}
 @media(max-width:560px){.page:not(.study-page){padding:20px 12px 48px}.course-header h1{font-size:30px}.page:not(.study-page) .panel{padding:17px}.page:not(.study-page) .panel-title{align-items:flex-start;flex-wrap:wrap}}
+
+/* Official Chess.com Neo artwork: keep precisely scaled images in every board. */
+.neo-piece-wrap{position:relative;display:block;flex:none;width:94%;height:94%;pointer-events:none;user-select:none}
+.neo-piece-wrap .neo-piece-fallback,.neo-piece-wrap .neo-piece-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.neo-piece-wrap .neo-piece-fallback{z-index:0}
+.neo-piece-wrap .neo-piece-image{z-index:1;image-rendering:auto}
+.neo-piece-wrap .neo-piece-image[hidden]{display:none}
+.sq .neo-piece-wrap{width:96%;height:96%;margin:auto}
+.studio-course-art .neo-piece-wrap{width:86px;height:86px;z-index:1;filter:drop-shadow(0 7px 7px #0008)}
+.study-mini-art .neo-piece-wrap{width:65px;height:65px}
+@media(max-width:600px){.studio-course-art .neo-piece-wrap{width:66px;height:75px}.study-mini-art .neo-piece-wrap{width:58px;height:58px}}
