@@ -73,7 +73,7 @@ function dashboardModule(m,i){
  const locked=!m.ids.some(id=>unlocked(id)||isMastered(id));
  const piece=['wK','wN','wP','bR','wB','bQ','wN'][i]||'wP';
  return `<button type="button" class="studio-course-card ${isCurrent?'is-current':''} ${locked?'is-locked':''}" data-page="curriculum" data-module="${i}" aria-label="View ${a(m.name)} lessons">
-  <div class="studio-course-art art-${i%4}" aria-hidden="true"><svg viewBox="0 0 100 100" focusable="false"><use href="assets/pieces.svg#${piece}"></use></svg></div>
+  <div class="studio-course-art art-${i%4}" aria-hidden="true">${neoPiece(piece)}</div>
   <div class="studio-course-copy"><div class="studio-course-heading"><strong>${a(m.name)}</strong><span class="studio-course-state">${mastered===m.ids.length?'Mastered':locked?'Upcoming':isCurrent?'In progress':mastered?'Continue':'Not started'}</span></div>
   <p>${a(m.subtitle)}</p>
   <div class="studio-course-progress"><span class="progress-bar"><span style="width:${progress}%"></span></span><em>${progress}%</em></div>
@@ -113,7 +113,7 @@ function dashboard(){
  <aside class="study-rail">
   <section class="studio-card study-continue"><h2><span class="studio-heading-icon">▷</span> Continue learning</h2>
    <button class="study-continue-link" data-page="lesson" data-id="${id}">
-    <span class="study-mini-art" aria-hidden="true"><svg viewBox="0 0 100 100" focusable="false"><use href="assets/pieces.svg#wK"></use></svg></span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
+    <span class="study-mini-art" aria-hidden="true">${neoPiece('wk')}</span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
    </button>
   </section>
   <section class="studio-card study-progress"><h2><span class="studio-heading-icon">♛</span> Your progress</h2><div class="study-progress-inner">
@@ -138,6 +138,14 @@ function curriculum(){const q=ui.search.toLowerCase().trim();wrap(`${header('LEA
  <div class="toolbar"><input id="course-search" class="input search" placeholder="Search lessons and topics…" value="${a(ui.search)}"><span class="chip">${actualMastery()} mastered · ${placementOnlyCount()} credited</span><button class="btn ghost small" data-page="placement">Placement test</button></div>
  ${D.modules.map((m,mi)=>{const ls=m.ids.map(id=>lessons.get(id)).filter(l=>!q||(l.title+' '+l.target).toLowerCase().includes(q));if(!ls.length)return '';return `<div class="panel" id="module-${mi}"><div class="panel-title"><div><div class="eyebrow">MODULE ${mi+1} · ${m.ids.length} LESSONS</div><h2 style="margin-top:6px">${m.icon} &nbsp;${a(m.name)}</h2><p class="helper" style="margin-top:7px">${a(m.subtitle)}</p></div><span class="chip">${m.ids.filter(isMastered).length} / ${m.ids.length}</span></div><div class="lesson-list">${ls.map(l=>lessonRow(l,lessonOrder.indexOf(l.id))).join('')}</div></div>`}).join('')}
  `,'Curriculum');}
+// Chess.com Neo artwork (licensed for this project by the site owner).
+// The legacy SVG remains behind the PNG so boards remain usable while offline.
+function neoPiece(code){
+ const p=String(code).toLowerCase();
+ if(!/^[wb][kqrbnp]$/.test(p))return '';
+ const sym=p[0]+p[1].toUpperCase();
+ return `<span class="neo-piece-wrap"><svg class="neo-piece-fallback" viewBox="0 0 100 100" aria-hidden="true"><use href="assets/pieces.svg#${sym}"></use></svg><img class="neo-piece-image" src="https://assets-themes.chess.com/image/ejgfv/150/${p}.png" data-piece="${p}" alt="" aria-hidden="true" draggable="false" decoding="async"></span>`;
+}
 function boardHTML(b,{small=false,viewOnly=false}={}){
  if(!b)return '';
  const s=bs(b),valid=C.legal(s),sel=valid.filter(m=>m[0]===b.selected).map(m=>m[1]);const rows=[];
@@ -145,7 +153,7 @@ function boardHTML(b,{small=false,viewOnly=false}={}){
   const row=b.flip?7-r:r,file=b.flip?7-f:f,i=row*16+file;
   const p=s.b[i],target=sel.includes(i),selected=b.selected===i,last=b.last?.includes(i);
   const dark=(row+file)%2===1;
-  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':`<svg class="chess-piece" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><use href="assets/pieces.svg#${C.side(p)===1?'w':'b'}${p.toUpperCase()}"></use></svg>`}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
+  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':neoPiece((C.side(p)===1?'w':'b')+p.toLowerCase())}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
  }
  return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}</div></div>`;
 }
@@ -577,6 +585,18 @@ document.addEventListener('click',e=>{
  e.preventDefault();if(btn.dataset.page){const pg=btn.dataset.page;if(pg==='lesson')nav('lesson',btn.dataset.id);else nav(pg,btn.dataset.filter??btn.dataset.module??null);return;}
  if(btn.dataset.action)action(btn.dataset.action,btn);
 });
+// If the primary Neo CDN is unavailable, try the alternative official image
+// endpoint before showing the locally cached vector fallback.
+document.addEventListener('error',event=>{
+ const img=event.target;
+ if(!img?.classList?.contains('neo-piece-image'))return;
+ const piece=img.dataset.piece;
+ if(!/^[wb][kqrbnp]$/.test(piece)){img.hidden=true;return;}
+ if(img.dataset.mirror!=='tried'){
+  img.dataset.mirror='tried';
+  img.src='https://images.chesscomfiles.com/chess-themes/pieces/neo/150/'+piece+'.png';
+ }else img.hidden=true;
+},true);
 document.addEventListener('change',e=>{
  if(e.target.id==='import-pgn'){loadPGNfile(e.target.files?.[0]);e.target.value='';}
  if(e.target.id==='import-progress'){loadBackup(e.target.files?.[0]);e.target.value='';}
