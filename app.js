@@ -146,8 +146,29 @@ function neoPiece(code){
  const sym=p[0]+p[1].toUpperCase();
  return `<span class="neo-piece-wrap"><svg class="neo-piece-fallback" viewBox="0 0 100 100" aria-hidden="true"><use href="assets/pieces.svg#${sym}"></use></svg><img class="neo-piece-image" src="https://assets-themes.chess.com/image/ejgfv/150/${p}.png" data-piece="${p}" alt="" aria-hidden="true" draggable="false" decoding="async"></span>`;
 }
-function boardHTML(b,{small=false,viewOnly=false}={}){
- if(!b)return '';
+// A separate Stockfish-based position display for teaching and retrospective review.
+// Never display it during answerable questions, tests, or recall drills.
+const evaluationCache=new Map();
+let evalTimer=null,evalToken=0,evalWorking=false,evalLastRequested='';
+function evalAllowed(b){
+ return !!b&&((ui.page==='lesson'&&ui.phase==='read'&&b.kind==='lesson')||
+  (ui.page==='analyze'&&!!ui.game&&b.kind==='analysis')||
+  (ui.page==='openings'&&ui.openingPhase==='explore'&&b.kind==='opening'));
+}
+function evalBar(b){
+ const fen=C.toFen(bs(b)),saved=evaluationCache.get(fen);
+ const pct=saved?.percent??50,white=saved?.label??'…',pending=!saved;
+ return `<div class="board-eval-layout"><div class="eval-rail" data-eval-fen="${a(fen)}" title="Stockfish evaluation from White's perspective, not a guaranteed result">
+  <div class="eval-head" aria-hidden="true">BLACK</div>
+  <div class="eval-column" role="img" aria-label="${saved?a(saved.description):'Position evaluation is loading'}">
+   <div class="eval-white" style="height:${pct}%"></div>
+   <span class="eval-score ${pending?'pending':''}">${a(white)}</span>
+  </div>
+  <div class="eval-foot" aria-hidden="true">WHITE</div></div>
+  <div class="board-eval-body">${boardInner(b)}</div></div>
+  <p class="eval-note">Stockfish estimate · White + means White is favored · ${saved?'Depth '+saved.depth:'Analyzing…'}.</p>`;
+}
+function boardInner(b,{viewOnly=false}={}){
  const s=bs(b),valid=C.legal(s),sel=valid.filter(m=>m[0]===b.selected).map(m=>m[1]);const rows=[];
  for(let r=0;r<8;r++)for(let f=0;f<8;f++){
   const row=b.flip?7-r:r,file=b.flip?7-f:f,i=row*16+file;
@@ -156,6 +177,67 @@ function boardHTML(b,{small=false,viewOnly=false}={}){
   rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':neoPiece((C.side(p)===1?'w':'b')+p.toLowerCase())}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
  }
  return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}</div></div>`;
+}
+function boardHTML(b,opts={}){
+ if(!b)return '';
+ const base=boardInner(b,opts);
+ if(!evalAllowed(b)||opts.viewOnly)return base;
+ const fen=C.toFen(bs(b)),saved=evaluationCache.get(fen),pct=saved?.percent??50;
+ const label=saved?.label??'…';
+ return `<div class="board-eval-layout">
+ <div class="eval-rail" data-eval-fen="${a(fen)}" title="Stockfish evaluation, shown from White's perspective">
+ <span class="eval-end-label">B</span>
+ <div class="eval-column" role="img" aria-label="${saved?a(saved.description):'Evaluation loading'}">
+ <div class="eval-white" style="height:${pct}%"></div>
+ <span class="eval-score ${saved?'':'pending'}">${a(label)}</span>
+ </div><span class="eval-end-label">W</span>
+ </div><div class="board-eval-body">${base}</div></div>
+ <p class="eval-note" data-eval-note="${a(fen)}">${saved?'Stockfish · depth '+saved.depth:'Stockfish analyzing…'} · Positive values favor White.</p>`;
+}
+function recordEvaluation(fen,r){
+ if(!r||!Number.isFinite(r.score)||!['cp','mate'].includes(r.scoreType))return;
+ const turn=C.parseFen(fen).t,whiteScore=r.score*turn;
+ const mate=r.scoreType==='mate';
+ const percent=mate?(whiteScore>0?98:whiteScore<0?2:50):50+46*Math.tanh(whiteScore/360);
+ const label=mate?(whiteScore>0?'M'+Math.abs(r.score):'-M'+Math.abs(r.score)):(whiteScore>0?'+':'')+(whiteScore/100).toFixed(1);
+ const description=mate?(whiteScore>0?'White has a forced mate':'Black has a forced mate'):
+  Math.abs(whiteScore)<35?'Approximately equal':whiteScore>0?'White is favored by '+label+' pawns':'Black is favored by '+Math.abs(whiteScore/100).toFixed(1)+' pawns';
+ evaluationCache.set(fen,{percent,label,description,depth:r.depth||0});
+ if(evaluationCache.size>130)evaluationCache.delete(evaluationCache.keys().next().value);
+}
+function paintEvaluation(fen){
+ const entry=evaluationCache.get(fen);if(!entry)return;
+ const rail=document.querySelector?.('.eval-rail');
+ if(!rail||rail.dataset.evalFen!==fen)return;
+ const bar=rail.querySelector('.eval-white'),score=rail.querySelector('.eval-score'),col=rail.querySelector('.eval-column');
+ if(bar)bar.style.height=entry.percent+'%';
+ if(score){score.textContent=entry.label;score.classList.remove('pending');}
+ if(col)col.setAttribute('aria-label',entry.description);
+ const note=document.querySelector?.('.eval-note');if(note&&note.dataset.evalNote===fen)note.textContent='Stockfish · depth '+entry.depth+' · Positive values favor White.';
+}
+function scheduleEvaluation(){
+ clearTimeout(evalTimer);
+ const b=ui.board;
+ if(!evalAllowed(b)||ui.gameReviewBusy||ui.engineBusy||ui.playing)return;
+ const fen=C.toFen(bs(b));
+ if(evaluationCache.has(fen)){paintEvaluation(fen);return;}
+ if(evalWorking)return;
+ evalTimer=setTimeout(async()=>{
+  if(evalWorking||!evalAllowed(ui.board)||C.toFen(bs(ui.board))!==fen||ui.gameReviewBusy||ui.engineBusy)return;
+  evalWorking=true;
+  try{
+   await engine.start(data.settings.mode);
+   const result=await engine.analyze(fen,{depth:Math.min(10,data.settings.depth||10),movetime:260});
+   recordEvaluation(fen,result);
+   paintEvaluation(fen);
+  }catch(err){
+   const note=document.querySelector?.('.eval-note');
+   if(note?.dataset.evalNote===fen)note.textContent='Evaluation unavailable. You can still explore the position.';
+  }finally{
+   evalWorking=false;
+   if(evalAllowed(ui.board)&&!ui.gameReviewBusy&&C.toFen(bs(ui.board))!==fen)scheduleEvaluation();
+  }
+ },280);
 }
 function boardControls(b,{engineAction=false}={}){if(!b)return '';
  const step=b.guided?b.sequence[b.moves.length]:null;
@@ -516,7 +598,7 @@ function accountPanel(){
 function settingsPage(){const st=engine.getStatus();wrap(`${header('APP SETTINGS','Make it yours','Browser-local progress works without an account. When cloud accounts are configured, you can sign in and choose exactly which progress copy to keep.')}${accountPanel()}
  <div class="cols-2"><div class="panel"><h3>Stockfish configuration</h3><p class="panel-desc">The supplied Stockfish 19 Lite engine works on ordinary modern browsers. Full multithreaded Stockfish requires a secure cross-origin-isolated site with the correct headers.</p><div class="grid-lines"><div><label for="engine-mode" class="helper">Engine profile</label><select id="engine-mode" class="select" style="width:100%;margin-top:6px"><option value="lite" ${data.settings.mode==='lite'?'selected':''}>Lite, single-threaded · fast and portable</option><option value="full" ${data.settings.mode==='full'?'selected':''} ${st.canFull?'':'disabled'}>Full, multithreaded · advanced analysis ${st.canFull?'':'(hosting headers required)'}</option></select></div><div><label for="engine-depth" class="helper">Position analysis depth</label><select id="engine-depth" class="select" style="width:100%;margin-top:6px">${[6,9,11,14,18].map(d=>`<option value="${d}" ${data.settings.depth===d?'selected':''}>Depth ${d}${d>=14?' · slower':''}</option>`).join('')}</select></div><button class="btn secondary" data-action="engine-test">Test Stockfish engine</button><div class="mini-panel"><span class="status-dot ${st.ready?'ready':''}"></span> ${a(st.ready?`Running ${st.mode}`:st.loading?'Loading…':'Not running')}<p class="helper">${a(st.error||'Stockfish starts when requested. It runs on this device, not a remote analysis server.')}</p></div></div></div>
  <div class="panel"><h3>Progress storage and backup</h3><p class="panel-desc">Your lessons, practice results, repertoires and game journal are always saved locally. If you sign in and choose a progress copy above, they can also sync securely to your account. Exporting a backup is still recommended.</p><div class="btn-row"><button class="btn" data-action="export">↓ Export progress .json</button><button class="btn secondary" data-action="progress-file">↑ Import backup</button></div><div class="divider"></div><h3>Installation</h3><p class="panel-desc">Use the included <span class="inline-code">start-server.bat</span> (Windows) or <span class="inline-code">python server.py</span>. This enables browser engine workers. Directly opening the HTML as a <span class="inline-code">file://</span> page may block WebAssembly and storage features.</p><p class="helper">PWA install depends on your browser and a secure hosting context. Your course remains free.</p></div></div><div class="panel"><h3>Privacy and limitations</h3><p class="panel-desc">Accounts and cloud storage use Supabase when enabled. Your account password is handled by Supabase Auth, not stored inside your chess progress. Games are imported manually (Chess.com game fetching is not automatic). Stockfish supplies engine evaluations; coaching explanations are authored or rules-based, not generated by an AI chat coach.</p></div>`,'Settings');}
-function render(){switch(ui.page){case'dashboard':dashboard();break;case'curriculum':curriculum();break;case'lesson':lessonPage();break;case'exercise':practiceQuestion();break;case'placement':placement();break;case'practice':practicePage();break;case'openings':openingPage();break;case'analyze':renderAnalysis();break;case'journal':journalPage();break;case'play':playPage();break;case'progress':progressPage();break;case'sources':sourcePage();break;case'settings':settingsPage();break;default:dashboard();}}
+function render(){switch(ui.page){case'dashboard':dashboard();break;case'curriculum':curriculum();break;case'lesson':lessonPage();break;case'exercise':practiceQuestion();break;case'placement':placement();break;case'practice':practicePage();break;case'openings':openingPage();break;case'analyze':renderAnalysis();break;case'journal':journalPage();break;case'play':playPage();break;case'progress':progressPage();break;case'sources':sourcePage();break;case'settings':settingsPage();break;default:dashboard();}scheduleEvaluation();}
 function nav(page,arg=null){if(page==='lesson')return initLesson(Number(arg||nextLesson()));ui.page=page;ui.menu=false;ui.notice='';ui.engineResult=null;if(page==='placement'&&ui.exam?.kind!=='placement')ui.exam=null;
  if(page==='curriculum'&&arg!=null)ui.moduleOpen=Number(arg);
  if(page==='practice'&&arg!=null)ui.filter=arg;
