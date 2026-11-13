@@ -22,6 +22,11 @@ assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
 nav('lesson',1);assert.equal(t.ui.page,'lesson');
+assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Lesson teaching uses a full-width reading layout');
+assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Core introduction occupies a full-width panel');
+assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Detailed lesson is not crammed alongside the chessboard');
+assert(app.innerHTML.indexOf('class="lesson-workshop-layout"') < app.innerHTML.indexOf('class="panel lesson-reading-panel lesson-theory"'),'The detailed lesson appears as a separate full-width section beneath the board');
+
 assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Every lesson must display expanded teaching');
 assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Lesson reading must expose two examples');
 assert(app.innerHTML.includes('Think it through'),'Every lesson must have recall prompts');
@@ -214,6 +219,11 @@ for(let id=1;id<=40;id++){
   t.data.mastered[prereq] ||= {at:Date.now()};
  }
  nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Full-width lesson layout '+id);
+ assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Spacious core teaching '+id);
+ assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Spacious in-depth teaching '+id);
+ assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-wrapup"'),'Full-width summary '+id);
+
  assert(app.innerHTML.includes('Common mistake to avoid'),'Lesson-specific mistake guidance visible '+id);
  assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
  press('start-mastery');
