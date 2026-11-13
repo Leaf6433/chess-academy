@@ -1,7 +1,7 @@
 /* Chess Academy 2 — original browser learning platform. Stockfish.js engine is third-party GPLv3. */
 (()=>{
 'use strict';
-const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],masteryBoards=window.CHESS_ACADEMY_MASTERY_BOARDS||[],masteryConcepts=window.CHESS_ACADEMY_MASTERY_CONCEPTS||[],engine=new window.EngineService();
+const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],masteryBoards=window.CHESS_ACADEMY_MASTERY_BOARDS||[],masteryConcepts=window.CHESS_ACADEMY_MASTERY_CONCEPTS||[],deepGuides=new Map((window.CHESS_ACADEMY_DEEP_DIVES||[]).map(g=>[g.id,g])),lessonScenes=new Map((window.CHESS_ACADEMY_LESSON_SCENES||[]).map(g=>[g.id,g])),engine=new window.EngineService();
 if(!C||!D)throw Error('Missing Chess Academy course dependencies.');
 const STORAGE='chess.academy.v2.progress';
 const $=id=>document.getElementById(id);
@@ -14,7 +14,7 @@ function load(){try{const raw=JSON.parse(localStorage.getItem(STORAGE));if(raw?.
 let data=load();
 const accounts=window.ChessAcademyAccounts||null;
 function loadAccountCopy(copy){if(!copy||copy.version!==2||!copy.mastered||!copy.review)throw Error('Invalid cloud progress.');data={...starter(),...copy,settings:{...starter().settings,...copy.settings}};save();ui.notice='Cloud progress loaded. Your browser now contains this copy.';render();}
-const ui={preview:null,page:'dashboard',id:1,phase:'read',board:null,exam:null,practiceId:null,notice:'',error:'',search:'',filter:'all',moduleOpen:0,menu:false,showHint:false,attemptWrong:0,feedback:null,feedbackGood:false,practiceOptionOrder:null,practiceOrigin:'practice',game:null,gamePly:0,engineState:null,engineResult:null,engineBusy:false,gameReviewBusy:false,gameReviewText:'',cancelReview:false,openingId:'italian',openingPhase:'explore',playSide:1,playing:false,pgnText:'',progressText:'',reflect:false,extraDetails:false};
+const ui={preview:null,page:'dashboard',id:1,phase:'read',lessonScene:0,board:null,exam:null,practiceId:null,notice:'',error:'',search:'',filter:'all',moduleOpen:0,menu:false,showHint:false,attemptWrong:0,feedback:null,feedbackGood:false,practiceOptionOrder:null,practiceOrigin:'practice',game:null,gamePly:0,engineState:null,engineResult:null,engineBusy:false,gameReviewBusy:false,gameReviewText:'',cancelReview:false,openingId:'italian',openingPhase:'explore',playSide:1,playing:false,pgnText:'',progressText:'',reflect:false,extraDetails:false};
 const now=()=>Date.now();
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify(data));accounts?.changed();}catch(err){ui.notice='Browser storage is unavailable or full. Export your progress regularly.';}}
 function isMastered(id){return !!data.mastered[id]||!!data.placementCredit[id];}
@@ -237,7 +237,7 @@ function boardControls(b,{engineAction=false}={}){if(!b)return '';
 }
 function initLesson(id,phase='read'){
  const l=lessons.get(Number(id));if(!l)return;if(!unlocked(l.id)&&!isMastered(l.id)){ui.notice='Finish the preceding lessons to unlock this one.';return curriculum();}
- ui.id=l.id;ui.phase=phase;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
+ ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
 }
 const VOCABULARY=[
  ['opposition','When two kings face each other on the same row or column with exactly one empty square between them. The king forced to move first may need to step aside.'],
@@ -267,12 +267,45 @@ function lessonVocabulary(l){
  if(!terms.length)return '';
  return `<section class="lesson-vocabulary" aria-label="Chess words explained"><div class="eyebrow">CHESS WORDS IN THIS LESSON</div><h3>Know the language</h3><p class="helper">These terms appear in this lesson. You don't need to memorize them before you begin.</p><dl>${terms.map(([word,definition])=>`<div><dt>${a(word.charAt(0).toUpperCase()+word.slice(1))}</dt><dd>${a(definition)}</dd></div>`).join('')}</dl></section>`;
 }
+// A complete learning route: original theory + three distinct concept studies,
+// two interactive demonstrations and three answer-reveal thought exercises.
+function deepLessonContent(l){
+ const guide=deepGuides.get(l.id);
+ if(!guide)return '<div class="feedback gold">Extended lesson notes are not available on this version.</div>';
+ return `<section class="deep-lesson" aria-label="Detailed chess instruction">
+ <div class="deep-lesson-heading"><span class="eyebrow">IN-DEPTH STUDY</span><h3>Learn it, recognize it, use it</h3>
+ <p class="helper">Spend time with each idea, then answer before opening the explanation. These are practice checks; the mastery assessment uses different positions and questions.</p></div>
+ ${guide.topics.map((t,i)=>`<article class="deep-topic"><div class="deep-topic-number">${i+1}</div><div class="deep-topic-body">
+ <h4>${a(t.title)}</h4><p>${a(t.explanation)}</p>
+ <details class="deep-check"><summary>Think it through: ${a(t.prompt)}</summary><p>${a(t.answer)}</p></details>
+ </div></article>`).join('')}
+ <div class="deep-review"><h4>Before guided practice</h4><p>Close this lesson for a moment. Try to explain the main idea out loud, describe a position where it helps, and name one case where it could fail. Then practice on the board without reading the model move first.</p></div></section>`;
+}
+function lessonSceneOptions(l){
+ const scene=lessonScenes.get(l.id);if(!scene)return '';
+ return `<div class="scene-selector" aria-label="Choose an interactive board example">
+ <div class="eyebrow">BOARD WALKTHROUGHS</div>
+ <p class="helper">Two different positions. Predict the next move, then press <strong>Next move</strong> and compare your idea with the explanation.</p>
+ <div class="scene-tabs"><button class="scene-tab ${ui.lessonScene===0?'active':''}" data-action="select-lesson-scene" data-scene="0">1 · Core example</button>
+ <button class="scene-tab ${ui.lessonScene===1?'active':''}" data-action="select-lesson-scene" data-scene="1">2 · ${a(scene.title)}</button></div>
+ <p class="scene-prompt">${a(ui.lessonScene===1?scene.question:'Replay the main lesson line. Pause before each Next move and predict the best idea.')}</p>
+ </div>`;
+}
+function loadLessonScene(index){
+ if(ui.page!=='lesson'||ui.phase!=='read')return;
+ const l=lessons.get(ui.id),scene=lessonScenes.get(l?.id);
+ if(!l||index===1&&!scene)return;
+ const choice=index===1?scene:l,flip=!!ui.board?.flip;
+ ui.lessonScene=index;
+ ui.board=makeBoard(exFen(choice),choice.line,'lesson');ui.board.flip=flip;
+ ui.engineResult=null;render();
+}
 function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=l.exercises.length;
  const top=`${header(`MODULE ${l.module+1} / LESSON ${index+1}`,l.title,l.target)}<div class="btn-row" style="margin:-4px 0 18px"><span class="chip ${done?'':'gold'}">${done?'✓ Mastered':data.completed[l.id]?'✓ Practice completed · mastery pending':data.studied[l.id]?'◉ Studied · mastery pending':data.placementCredit[l.id]?'◇ Placement credit · not studied':'Mastery required'}</span><span class="chip grey">${l.length} min target · ${qCount} checks</span><button class="btn ghost small" data-page="curriculum">← All lessons</button></div>
  <div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
-  const body=`<div class="layout-board"><div>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div><div class="panel" style="margin-bottom:0"><div class="eyebrow">LEARN</div><h2 style="margin:8px 0 15px">The key idea</h2><p class="helper" style="margin-bottom:12px">Use Next move to watch the example unfold, Back to review it, or select a played move below the board to return to that position.</p><div class="lesson-notes">${l.body.map(p=>`<p>${a(p)}</p>`).join('')}</div>${lessonVocabulary(l)}${l.worked?`<div class="feedback info">${a(l.worked)}</div>`:''}<div class="divider"></div><h3>Remember these ideas</h3><div class="checklist" style="margin:13px 0">${l.takeaways.map(t=>`<div class="check"><span class="checkmark">✓</span><span>${a(t)}</span></div>`).join('')}</div><details class="notation-help"><summary>New to chess notation? See a quick guide</summary><div class="helper"><strong>Piece letters:</strong> K = king, Q = queen, R = rook, B = bishop, N = knight. Pawns use their destination square (like e4). <strong>x</strong> means capture, <strong>+</strong> check, <strong>#</strong> checkmate, and <strong>O-O</strong> kingside castling. Select the board's Next button to see each move rather than imagining it.</div></details><div class="lesson-coach"><div class="eyebrow">NEXT STEP · APPLY IT</div><p class="helper" style="margin:9px 0 12px">Knowing the idea is the start. Work through the practice positions for this lesson, then prove it with an unassisted mastery check.</p><button class="btn" data-action="lesson-phase" data-phase="practice">Practice these positions →</button></div><div class="section-label">THEORY & FURTHER READING</div>${l.refs.map(ref=>{const s=D.sources.find(x=>x.id===ref);return s?`<div style="margin-bottom:7px"><a class="source-link" target="_blank" rel="noopener noreferrer" href="${a(s.url)}">${a(s.title)} ↗</a></div>`:''}).join('')}<div style="margin-top:9px"><a class="source-link" href="https://lichess.org/training/themes" target="_blank" rel="noopener noreferrer">Lichess tactical themes ↗</a></div></div></div>`;
+  const body=`<div class="lesson-time-plan"><strong>Suggested 25-minute study route</strong><span>Core ideas · 5 min</span><span>Detailed topics · 9 min</span><span>Two boards · 6 min</span><span>Recall and practice · 5 min</span></div><div class="layout-board"><div>${lessonSceneOptions(l)}${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div><div class="panel" style="margin-bottom:0"><div class="eyebrow">LEARN</div><h2 style="margin:8px 0 15px">The key idea</h2><p class="helper" style="margin-bottom:12px">Use Next move to watch the example unfold, Back to review it, or select a played move below the board to return to that position.</p><div class="lesson-notes">${l.body.map(p=>`<p>${a(p)}</p>`).join('')}</div>${deepLessonContent(l)}${lessonVocabulary(l)}${l.worked?`<div class="feedback info">${a(l.worked)}</div>`:''}<div class="divider"></div><h3>Remember these ideas</h3><div class="checklist" style="margin:13px 0">${l.takeaways.map(t=>`<div class="check"><span class="checkmark">✓</span><span>${a(t)}</span></div>`).join('')}</div><details class="notation-help"><summary>New to chess notation? See a quick guide</summary><div class="helper"><strong>Piece letters:</strong> K = king, Q = queen, R = rook, B = bishop, N = knight. Pawns use their destination square (like e4). <strong>x</strong> means capture, <strong>+</strong> check, <strong>#</strong> checkmate, and <strong>O-O</strong> kingside castling. Select the board's Next button to see each move rather than imagining it.</div></details><div class="lesson-coach"><div class="eyebrow">NEXT STEP · APPLY IT</div><p class="helper" style="margin:9px 0 12px">Knowing the idea is the start. Work through the practice positions for this lesson, then prove it with an unassisted mastery check.</p><button class="btn" data-action="lesson-phase" data-phase="practice">Practice these positions →</button></div><div class="section-label">THEORY & FURTHER READING</div>${l.refs.map(ref=>{const s=D.sources.find(x=>x.id===ref);return s?`<div style="margin-bottom:7px"><a class="source-link" target="_blank" rel="noopener noreferrer" href="${a(s.url)}">${a(s.title)} ↗</a></div>`:''}).join('')}<div style="margin-top:9px"><a class="source-link" href="https://lichess.org/training/themes" target="_blank" rel="noopener noreferrer">Lichess tactical themes ↗</a></div></div></div>`;
   return wrap(top+body+(ui.engineResult?engineResponse():'') ,'Lesson');
  }
  if(ui.phase==='practice'){
@@ -646,7 +679,8 @@ async function loadBackup(file){try{const d=JSON.parse(await file.text());if(d.v
 function action(name,el){switch(name){
  case'menu':ui.menu=!ui.menu;return render();case'close-menu':ui.menu=false;return render();case'dismiss':ui.notice='';return render();
  case'start-placement':return startAssessment('placement');
- case'lesson-phase':ui.phase=el.dataset.phase;if(ui.phase==='practice'){data.studied[ui.id]=data.studied[ui.id]||now();save();}ui.board=makeBoard(lessons.get(ui.id).fen,lessons.get(ui.id).line,'lesson');return render();
+ case'select-lesson-scene':return loadLessonScene(Number(el.dataset.scene));
+ case'lesson-phase':ui.lessonScene=0;ui.phase=el.dataset.phase;if(ui.phase==='practice'){data.studied[ui.id]=data.studied[ui.id]||now();save();}ui.board=makeBoard(lessons.get(ui.id).fen,lessons.get(ui.id).line,'lesson');return render();
  case'start-mastery':return startAssessment('mastery',Number(el.dataset.id||ui.id));
  case'exam-choice':return boardOrMCchoice(Number(el.dataset.choice));case'exam-next':return nextExam();
  case'open-question':return openPractice(el.dataset.qid);
