@@ -288,3 +288,7 @@ h1,h2,h3{letter-spacing:-.45px}
 .scene-tab:focus-visible,.deep-check summary:focus-visible{outline:2px solid #f5c668;outline-offset:2px}
 .scene-prompt{font-size:12px;line-height:1.65;color:#e3ebd9;margin:12px 2px 0}
 @media(max-width:600px){.lesson-time-plan{gap:6px 10px;padding:11px}.deep-lesson{padding:14px 12px 5px}.deep-topic{gap:9px}.scene-tab{padding:8px 6px;font-size:10px}}
+
+.deep-pitfall{margin:6px 0 2px;padding:15px 16px;border:1px solid #8c6b41;border-radius:10px;background:#302c20}
+.deep-pitfall strong{display:block;color:#f2d4a1;font-size:13px;margin:0 0 8px}
+.deep-pitfall p{font-size:13px;line-height:1.75;color:#f1e9d5;margin:0}
