@@ -6,7 +6,10 @@
  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="manifest" href="manifest.webmanifest">
  <title>Chess Academy · Master chess, one skill at a time</title>
  <link rel="stylesheet" href="styles.css">
- <script defer src="chess-engine.js"></script><script defer src="course-data-v2.js"></script><script defer src="foundation-drills.js"></script><script>window.CHESS_ACADEMY_LITE_ONLY=true;</script><script defer src="engine-service.js"></script><script defer src="app.js"></script>
+ <script defer src="chess-engine.js"></script><script defer src="course-data-v2.js"></script><script defer src="foundation-drills.js"></script><script>window.CHESS_ACADEMY_LITE_ONLY=true;</script><script defer src="engine-service.js"></script>
+ <script defer src="supabase-config.js"></script>
+ <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+ <script defer src="account-client.js"></script><script defer src="app.js"></script>
 </head>
 <body><div id="app"><div class="loading"><div class="spinner">♞</div><strong>Opening Chess Academy…</strong></div></div>
 <input type="file" id="import-pgn" accept=".pgn,text/plain" hidden><input type="file" id="import-progress" accept=".json,application/json" hidden>
