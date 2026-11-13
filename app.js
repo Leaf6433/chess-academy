@@ -8,8 +8,12 @@ const $=id=>document.getElementById(id);
 const escapeHTML=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const a=x=>escapeHTML(x);
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...D.exercises,...boardDrills.practice],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts].map(e=>[e.id,e]));
-function lessonExercises(l){return [...boardDrills.practice.filter(q=>q.lesson===l.id),...l.exercises];}
+const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...boardDrills.practice,...D.exercises],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts].map(e=>[e.id,e]));
+function lessonExercises(l){
+ const boards=l.exercises.filter(q=>q.kind==='board');
+ const concept=l.exercises.find(q=>q.kind==='mc');
+ return [...boardDrills.practice.filter(q=>q.lesson===l.id),...boards,...(concept?[concept]:[])];
+}
 const starter=()=>({version:2,mastered:{},placementCredit:{},opened:{},studied:{},completed:{},attempts:{},review:{},practiceSolved:{},lastLesson:1,placement:null,starred:[],repertoire:[],openingDrills:{},games:[],journal:[],settings:{mode:'lite',depth:11,reviewLimit:40},created:Date.now()});
 function load(){try{const raw=JSON.parse(localStorage.getItem(STORAGE));if(raw?.version===2)return {...starter(),...raw,opened:{...(raw.opened||raw.studied||{})},studied:raw.opened?raw.studied||{}:{},completed:raw.completed||{},settings:{...starter().settings,...raw.settings}};}catch(e){}const first=starter();try{const older=JSON.parse(localStorage.getItem('chess.academy.800-1200.progress.v1'));if(older){first.studied=Object.fromEntries((older.completed||[]).map(x=>[x,Date.now()]));first.lastLesson=Number(older.recent)||1;}}catch(e){}return first;}
 let data=load();
@@ -369,7 +373,7 @@ function lessonPracticeSummary(l){
  const done=!!data.mastered[l.id];
  return `<div class="lesson-coach"><div class="eyebrow">YOUR PRACTICE PLAN</div>
   <h3 style="margin-top:7px">${done?'Mastery achieved':solved===list.length?'Practice complete — ready to test':'Build confidence one position at a time'}</h3>
-  <p class="helper">${solved} of ${list.length} lesson exercises practiced. Watch the demonstration, try these positions, and then take an unassisted mastery test.</p>
+  <p class="helper">${solved} of ${list.length} lesson exercises practiced. Most guided practice questions now require a move on the board. Extra optional concept questions are available in Practice Studio.</p>
   <div class="progress-bar"><span style="width:${percent(solved,list.length)}%"></span></div>
   <div class="btn-row" style="margin-top:14px">
    ${next?`<button class="btn" data-action="open-question" data-qid="${a(next.id)}">Practice next position →</button>`:`<button class="btn" data-action="start-mastery">Take mastery check →</button>`}
