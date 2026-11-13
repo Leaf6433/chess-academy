@@ -11,7 +11,7 @@ global.location={href:'http://localhost:8765/index.html'};
 global.navigator={};
 global.document={getElementById(id){return elements.get(id)||null;},addEventListener(name,fn){callbacks[name]=fn;}};
 global.scrollTo=()=>{};
-require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');
+require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
 require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
@@ -22,6 +22,16 @@ assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
 nav('lesson',1);assert.equal(t.ui.page,'lesson');
+assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Every lesson must display expanded teaching');
+assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Lesson reading must expose two examples');
+assert(app.innerHTML.includes('Think it through'),'Every lesson must have recall prompts');
+press('select-lesson-scene',{scene:'1'});
+assert.equal(t.ui.lessonScene,1,'Second example selected');
+assert(app.innerHTML.includes('Save the rook'),'Alternate scene visible');
+press('board-next');assert.equal(t.ui.board.moves.length,1,'Alternate example replays legally');
+press('select-lesson-scene',{scene:'0'});
+assert.equal(t.ui.lessonScene,0,'Return to original model');
+
 assert(app.innerHTML.includes('class="eval-rail"'),'Lesson reading has an evaluation rail');
 assert(app.innerHTML.includes('Stockfish analyzing'),'Loading indicator does not claim position is equal');
 assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'),'Lesson 1 introduces relevant vocabulary');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
@@ -169,4 +179,50 @@ assert(kingQuestion.explanation.includes('legal pawn move'));
 assert(rookQuestion.prompt.includes('rook move that checks'));
 assert(rookQuestion.explanation.includes('gaining time'));
 assert.equal(new Set(t.D.exercises.map(q=>q.id)).size,121);
-console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings');
+
+// Systematic content and test-bank validation for every lesson.
+const masteryBoards=global.CHESS_ACADEMY_MASTERY_BOARDS;
+const masteryConcepts=global.CHESS_ACADEMY_MASTERY_CONCEPTS;
+const deepGuides=global.CHESS_ACADEMY_DEEP_DIVES;
+const lessonScenes=global.CHESS_ACADEMY_LESSON_SCENES;
+assert.equal(masteryBoards.length,40);
+assert.equal(masteryConcepts.length,160);
+assert.equal(deepGuides.length,40);
+assert.equal(lessonScenes.length,40);
+const allMastery=[...masteryBoards,...masteryConcepts];
+assert.equal(new Set(allMastery.map(q=>q.id)).size,200);
+const practiceIds=new Set(t.D.exercises.map(q=>q.id));
+assert(allMastery.every(q=>!practiceIds.has(q.id)),'Mastery uses independent questions');
+for(let id=1;id<=40;id++){
+ const guide=deepGuides.find(g=>g.id===id);
+ const sample=lessonScenes.find(g=>g.id===id);
+ const quest=masteryConcepts.filter(q=>q.lesson===id);
+ const board=masteryBoards.find(q=>q.lesson===id);
+ assert(guide?.topics?.length===3,'Three extended lesson topics '+id);
+ assert(guide.topics.every(q=>q.explanation?.length>100&&q.prompt&&q.answer),'Each topic needs instructive content and an answer '+id);
+ assert(sample?.line?.length>0,'Interactive second board example '+id);
+ assert.equal(quest.length,4,'Four new reasoning questions '+id);
+ assert(board&&board.kind==='board','One new interactive mastery move '+id);
+ let st=t.C.parseFen(t.exFen(sample));
+ for(const [uci] of sample.line){const m=t.C.fromUci(st,uci);assert(m,'Legal guided move '+id+' '+uci);st=t.C.apply(st,m);}
+ assert(t.C.fromUci(t.C.parseFen(t.exFen(board)),board.answer),'Legal mastery move '+id);
+ for(const q of quest){assert.equal(q.kind,'mc');assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
+ // The user must be able to open the independent test, answer it and see a score.
+ t.data.mastered[id-1] ||= {at:Date.now()};
+ nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
+ press('start-mastery');
+ assert.equal(t.ui.exam.items.length,5,'Five new assessment questions for lesson '+id);
+ assert(t.ui.exam.items.every(q=>!practiceIds.has(q.id)),'No recycled practice question '+id);
+ assert(!app.innerHTML.includes('class="eval-rail"'),'Mastery bar must stay hidden '+id);
+ for(const q of t.ui.exam.items){
+  if(q.kind==='mc')press('exam-choice',{choice:String(q.answer)});
+  else move(q.answer);
+  assert.equal(t.ui.exam.answered,true,'Mastery answer recorded '+id);
+  press('exam-next');
+ }
+ assert.equal(t.ui.exam.passed,true,'Mastery correctly passed lesson '+id);
+ assert(app.innerHTML.includes('MASTERY RESULTS'),'Mastery result displayed '+id);
+}
+
+console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings, forty detailed lessons, forty independent mastery assessments');
