@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pages: write
   id-token: write
 
@@ -28,10 +29,13 @@ jobs:
         with:
           node-version: '22'
       - name: Run chess rules and website smoke tests
+        id: smoke
         run: node tests/smoke.cjs
       - name: Test account lifecycle and cloud sync conflicts
+        id: accounts
         run: node tests/accounts.cjs
       - name: Verify persistent account sync and conflict protection
+        id: account_resume
         run: node tests/account-resume.cjs
       - name: Verify Stockfish UCI integration (report separately)
         id: stockfish_check
@@ -54,3 +58,33 @@ jobs:
       - name: Publish
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Report deployment outcome to Chess Academy tracking issue
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_SHA: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CHECK_SMOKE: ${{ steps.smoke.outcome }}
+          CHECK_ACCOUNTS: ${{ steps.accounts.outcome }}
+          CHECK_RESUME: ${{ steps.account_resume.outcome }}
+          CHECK_STOCKFISH: ${{ steps.stockfish_check.outcome }}
+          CHECK_PUBLISH: ${{ steps.deployment.outcome }}
+        run: |
+          {
+            echo "Chess Academy automated deployment report"
+            echo "Commit: $RUN_SHA"
+            echo "Run: $RUN_URL"
+            echo "Chess / website smoke tests: $CHECK_SMOKE"
+            echo "Account lifecycle: $CHECK_ACCOUNTS"
+            echo "Account resume: $CHECK_RESUME"
+            echo "Stockfish CLI: $CHECK_STOCKFISH"
+            echo "GitHub Pages publish: $CHECK_PUBLISH"
+          } > /tmp/academy-deploy-report.txt
+          jq -n --rawfile body /tmp/academy-deploy-report.txt '{body:$body}' |
+            curl -fsSL --retry 2 -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              --data-binary @- "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/1/comments"
+
