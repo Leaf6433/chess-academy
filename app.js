@@ -59,7 +59,7 @@ function boardHTML(b,{small=false,viewOnly=false}={}){
   const row=b.flip?7-r:r,file=b.flip?7-f:f,i=row*16+file;
   const p=s.b[i],target=sel.includes(i),selected=b.selected===i,last=b.last?.includes(i);
   const dark=(row+file)%2===1;
-  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}"><span class="piece ${C.side(p)===1?'white':'black'}">${C.glyph[p]}</span>${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
+  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':`<svg class="chess-piece" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><use href="assets/pieces.svg#${C.side(p)===1?'w':'b'}${p.toUpperCase()}"></use></svg>`}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
  }
  return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}</div></div>`;
 }
