@@ -22,6 +22,9 @@ assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
 nav('lesson',1);assert.equal(t.ui.page,'lesson');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
+assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'),'Official Neo white king image must render');
+assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/bk.png'),'Official Neo black king image must render');
+assert(app.innerHTML.includes('neo-piece-image'),'All chess piece images use Neo renderer');
 assert(app.innerHTML.includes('quick guide'),'Each lesson has a notation guide');
 assert(app.innerHTML.includes('Practice these positions'),'Every lesson offers a guided practice step');
 press('lesson-phase',{phase:'practice'});
@@ -63,6 +66,7 @@ for(const q of global.FOUNDATION_DRILLS){
  assert(t.D.lessons.some(l=>l.id===q.lesson),'foundation drill has matching lesson');
 }
 nav('dashboard');assert(app.innerHTML.includes('Foundation training'));
+assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wn.png'),'Dashboard course art uses Neo pieces');
 assert(app.innerHTML.includes('Your courses'),'Cozy dashboard course grid');
 assert(app.innerHTML.includes('Continue learning'),'Cozy dashboard continuation card');
 assert(app.innerHTML.includes('Today\'s focus'),'Cozy dashboard focus panel');
