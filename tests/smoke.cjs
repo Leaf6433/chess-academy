@@ -220,6 +220,18 @@ assert(allMastery.every(q=>!practiceIds.has(q.id)),'Mastery uses independent que
 for(let id=1;id<=40;id++){
  const guide=deepGuides.find(g=>g.id===id);
  const sample=lessonScenes.find(g=>g.id===id);
+ const core=t.D.lessons.find(l=>l.id===id);
+ assert(core?.line?.length>0,'Core example has at least one move for lesson '+id);
+ assert(core.worked?.length>20,'Core example has a relevant explanation for lesson '+id);
+ assert.notEqual(t.exFen(core).split(' ').slice(0,2).join(' '),t.exFen(sample).split(' ').slice(0,2).join(' '),'Core and alternate use different positions for lesson '+id);
+ let coreState=t.C.parseFen(t.exFen(core));
+ for(const [uci,why] of core.line){
+  const m=t.C.fromUci(coreState,uci);
+  assert(m,'Core example move must be legal, lesson '+id+' '+uci);
+  assert(why?.length>20,'Each core move needs an educational explanation '+id);
+  coreState=t.C.apply(coreState,m);
+ }
+
  const quest=masteryConcepts.filter(q=>q.lesson===id);
  const board=masteryBoards.find(q=>q.lesson===id);
  assert(guide?.topics?.length===3,'Three extended lesson topics '+id);
@@ -241,6 +253,20 @@ for(let id=1;id<=40;id++){
  for(const q of quest){assert.equal(q.kind,'mc');assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
  // The user must be able to open the independent test, answer it and see a score.
  nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ assert.equal(t.ui.board.sequence.length,core.line.length,'Core model loads all demonstration moves '+id);
+ assert(!app.innerHTML.includes('Guided line complete.'),'Core model is not already complete on opening '+id);
+ press('board-next');
+ assert.equal(t.ui.board.moves.length,1,'The first core move actually plays on the board '+id);
+ press('board-restart');
+ assert.equal(t.ui.board.moves.length,0,'Core board can restart '+id);
+ press('select-lesson-scene',{scene:'1'});
+ assert.equal(t.ui.board.sequence.length,sample.line.length,'Second walkthrough loads '+id);
+ assert(!app.innerHTML.includes('Guided line complete.'),'Second walkthrough is not already complete '+id);
+ press('board-next');
+ assert.equal(t.ui.board.moves.length,1,'The second walkthrough move plays '+id);
+ press('select-lesson-scene',{scene:'0'});
+ assert.equal(t.ui.board.moves.length,0,'Switching back to core resets position '+id);
+
  assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Full-width lesson layout '+id);
  assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Spacious core teaching '+id);
  assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Spacious in-depth teaching '+id);
