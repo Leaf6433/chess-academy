@@ -54,4 +54,37 @@ nav('practice');const q=t.D.exercises.find(x=>x.kind==='mc');press('open-questio
 nav('practice','due');assert.equal(t.ui.filter,'due');
 nav('settings');assert(app.innerHTML.includes('Export progress'));
 nav('progress');assert(app.innerHTML.includes('Course mastery by module'));
+// Regression: the diagnostic must display legal move sequences without revealing answers.
+t.startAssessment('placement');
+const items=t.ui.exam.items;
+const slavAt=items.findIndex(q=>q.id==='V30-1');
+assert(slavAt>=0,'Slav question is included in placement');
+t.ui.exam.index=slavAt;
+const target=items[slavAt];
+assert.equal(target.kind,'mc');
+const question=t.D.exercises.find(q=>q.id===target.id);
+assert.equal(question.prompt.includes('1.d4 d5 2.c4'),true);
+// Advance through questions to initialize the preview using the normal page transition.
+t.startAssessment('placement');
+for(let i=0;i<slavAt;i++){const q=t.ui.exam.items[t.ui.exam.index];if(q.kind==='mc')press('exam-choice',{choice:String(q.answer)});else move(q.answer);press('exam-next');}
+assert.equal(t.ui.exam.items[t.ui.exam.index].id,'V30-1');
+assert.deepEqual(t.ui.preview.moves,['d2d4','d7d5','c2c4']);
+assert.equal(t.ui.preview.index,3);
+assert(app.innerHTML.includes('POSITION REPLAY'));
+assert(!app.innerHTML.includes('Replay only the answer'));
+press('preview-back');assert.equal(t.ui.preview.index,2);
+press('preview-start');assert.equal(t.ui.preview.index,0);
+press('preview-end');assert.equal(t.ui.preview.index,3);
+press('preview-jump',{ply:'1'});assert.equal(t.ui.preview.index,1);
+assert.equal(t.ui.exam.answered,null,'Preview does not submit an answer');
+press('exam-choice',{choice:String(target.answer)});assert.equal(t.ui.exam.answered,true);
+// Placement credit does not imply study, completion, or mastery.
+assert.equal(t.data.mastered[2],undefined);
+t.data.placementCredit[2]={at:Date.now()};
+assert.equal(t.data.studied[2],undefined);
+assert.equal(t.data.completed[2],undefined);
+nav('curriculum');assert(app.innerHTML.includes('Placement credit · not studied'));
+nav('lesson',2);assert.equal(t.data.studied[2],undefined,'Opening a lesson alone must not mark it studied');
+press('lesson-phase',{phase:'practice'});assert(t.data.studied[2],'Entering practice marks study');
+
 console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings');
