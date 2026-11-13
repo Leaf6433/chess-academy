@@ -261,3 +261,30 @@ h1,h2,h3{letter-spacing:-.45px}
 .eval-note{font-size:11px;color:#aab6a5;margin:6px 0 0;line-height:1.5}
 @media(max-width:560px){.board-eval-layout{grid-template-columns:26px minmax(0,1fr);gap:5px}.eval-column{border-width:1px;border-radius:5px}.eval-score{min-width:23px;padding:3px 2px;font-size:9px}.board-eval-body .board-frame{padding:5px}.eval-end-label{font-size:9px}.eval-note{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.eval-white{transition:none}}
+
+
+/* A structured, genuinely teachable 25-minute study flow across all lessons. */
+.lesson-time-plan{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 16px;border:1px solid #576448;border-radius:13px;margin:0 0 18px;background:linear-gradient(100deg,#263729,#17251c);color:#ccd6ba;font-size:12px}
+.lesson-time-plan strong{color:#f4dfb6;font-size:13px;flex:1 0 100%}
+.deep-lesson{margin:22px 0 20px;padding:18px 18px 8px;border:1px solid #53644e;border-radius:14px;background:linear-gradient(150deg,#26362b,#19281f)}
+.deep-lesson-heading h3{margin:7px 0 9px;font-size:21px;color:#f5e5c2}
+.deep-lesson-heading .helper{line-height:1.65;margin-bottom:16px}
+.deep-topic{display:grid;grid-template-columns:27px minmax(0,1fr);gap:11px;padding:18px 0;border-top:1px solid #485a48}
+.deep-topic-number{font:bold 13px var(--body);display:flex;align-items:center;justify-content:center;border-radius:50%;background:#4c604a;color:#f5e0bb;width:27px;height:27px}
+.deep-topic-body{min-width:0}
+.deep-topic-body h4{margin:2px 0 9px;color:#f5e4c2;font-size:16px}
+.deep-topic-body>p{font-size:13px;line-height:1.8;color:#e0e7d7;margin:0 0 13px}
+.deep-check{border-left:3px solid #c6a86d;background:#19271f;padding:10px 13px;border-radius:0 9px 9px 0;margin:7px 0 0}
+.deep-check summary{font-size:12px;line-height:1.65;color:#eddbb9;font-weight:750;cursor:pointer}
+.deep-check p{font-size:13px;line-height:1.7;margin:10px 0 2px;color:#e8eee3}
+.deep-review{border-top:1px solid #485a48;padding:16px 2px}
+.deep-review h4{color:#e9d09e;margin:0 0 7px;font-size:14px}
+.deep-review p{color:#dbe4d6;font-size:12px;line-height:1.7;margin:0}
+.scene-selector{padding:13px 14px 15px;border:1px solid #56664e;border-radius:13px;background:#213326;margin:0 0 10px}
+.scene-selector .helper{font-size:11px;line-height:1.6;margin:8px 0 12px}
+.scene-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.scene-tab{background:#16261c;border:1px solid #67755d;color:#e0e6d4;border-radius:8px;font-size:11px;line-height:1.5;padding:9px 8px;cursor:pointer;font-weight:650}
+.scene-tab.active{background:#a67d43;border-color:#d1ab6d;color:#1a241b}
+.scene-tab:focus-visible,.deep-check summary:focus-visible{outline:2px solid #f5c668;outline-offset:2px}
+.scene-prompt{font-size:12px;line-height:1.65;color:#e3ebd9;margin:12px 2px 0}
+@media(max-width:600px){.lesson-time-plan{gap:6px 10px;padding:11px}.deep-lesson{padding:14px 12px 5px}.deep-topic{gap:9px}.scene-tab{padding:8px 6px;font-size:10px}}
