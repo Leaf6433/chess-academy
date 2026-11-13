@@ -23,8 +23,8 @@ function allMastered(){return lessonOrder.filter(isMastered).length;}
 function actualMastery(){return lessonOrder.filter(id=>!!data.mastered[id]).length;}
 function placementOnlyCount(){return lessonOrder.filter(id=>!data.mastered[id]&&!!data.placementCredit[id]).length;}
 function nextLesson(){return lessonOrder.find(id=>!data.mastered[id])||lessonOrder[lessonOrder.length-1];}
-function unlocked(id){const at=lessonOrder.indexOf(Number(id));return at===0||lessonOrder.slice(0,at).every(isMastered);}
-function canResume(id){return lessons.has(id)&&(unlocked(id)||isMastered(id));}
+function unlocked(id){return lessons.has(Number(id));}
+function canResume(id){return unlocked(id);}
 function dueCount(){return Object.values(data.review).filter(x=>x.due<=now()).length;}
 function percent(n,d){return d?Math.round(n/d*100):0;}
 function exFen(q){return typeof q.fen==='string'?q.fen:C.toFen(C.after(C.START_FEN,q.fen.after));}
@@ -70,11 +70,11 @@ function activityAge(timestamp){
 function dashboardModule(m,i){
  const mastered=m.ids.filter(id=>!!data.mastered[id]).length,credited=m.ids.filter(id=>!!data.placementCredit[id]&&!data.mastered[id]).length;
  const progress=percent(mastered,m.ids.length),isCurrent=m.ids.includes(nextLesson());
- const locked=!m.ids.some(id=>unlocked(id)||isMastered(id));
+ const locked=false;
  const piece=['wK','wN','wP','bR','wB','bQ','wN'][i]||'wP';
  return `<button type="button" class="studio-course-card ${isCurrent?'is-current':''} ${locked?'is-locked':''}" data-page="curriculum" data-module="${i}" aria-label="View ${a(m.name)} lessons">
   <div class="studio-course-art art-${i%4}" aria-hidden="true">${neoPiece(piece)}</div>
-  <div class="studio-course-copy"><div class="studio-course-heading"><strong>${a(m.name)}</strong><span class="studio-course-state">${mastered===m.ids.length?'Mastered':locked?'Upcoming':isCurrent?'In progress':mastered?'Continue':'Not started'}</span></div>
+  <div class="studio-course-copy"><div class="studio-course-heading"><strong>${a(m.name)}</strong><span class="studio-course-state">${mastered===m.ids.length?'Mastered':isCurrent?'Suggested next':mastered?'Continue':'Available'}</span></div>
   <p>${a(m.subtitle)}</p>
   <div class="studio-course-progress"><span class="progress-bar"><span style="width:${progress}%"></span></span><em>${progress}%</em></div>
   <div class="studio-course-meta"><span>▤ ${m.ids.length} lessons</span><span>◎ ${mastered} mastered</span>${credited?`<span>✧ ${credited} credited</span>`:''}</div></div>
@@ -133,8 +133,8 @@ function dashboard(){
  </div>
  </div>`,'Dashboard');
 }
-function lessonRow(l,i){const done=!!data.mastered[l.id],credited=!!data.placementCredit[l.id],studied=!!data.studied[l.id],lock=!unlocked(l.id)&&!isMastered(l.id),current=nextLesson()===l.id;return `<button class="lesson-row ${lock?'locked':''}" data-page="lesson" data-id="${l.id}" ${lock?'disabled':''}><div class="number ${done||credited?'complete':''}">${done?'✓':data.completed[l.id]?'✓':studied?'◉':credited?'◇':lock?'🔒':String(i+1).padStart(2,'0')}</div><div class="lesson-row-main"><strong>${a(l.title)}</strong><p>${a(l.target)}</p></div><span class="right-detail">${lessonStatus(l.id)}${current?' · Next up':''}${lock?' · Locked':''} · ${l.length} min</span></button>`;}
-function curriculum(){const q=ui.search.toLowerCase().trim();wrap(`${header('LEARNING PATH','Your curriculum','40 original lessons across seven skill domains. Each lesson includes guided study, exercises, and a mastery assessment. Lessons unlock after proven mastery.')}
+function lessonRow(l,i){const done=!!data.mastered[l.id],credited=!!data.placementCredit[l.id],studied=!!data.studied[l.id],lock=false,current=nextLesson()===l.id;return `<button class="lesson-row ${lock?'locked':''}" data-page="lesson" data-id="${l.id}" ${lock?'disabled':''}><div class="number ${done||credited?'complete':''}">${done?'✓':data.completed[l.id]?'✓':studied?'◉':credited?'◇':lock?'🔒':String(i+1).padStart(2,'0')}</div><div class="lesson-row-main"><strong>${a(l.title)}</strong><p>${a(l.target)}</p></div><span class="right-detail">${lessonStatus(l.id)}${current?' · Suggested next':''} · ${l.length} min</span></button>`;}
+function curriculum(){const q=ui.search.toLowerCase().trim();wrap(`${header('LEARNING PATH','Your curriculum','40 original lessons across seven skill domains. Each lesson includes guided study, exercises, and a mastery assessment. All lessons are available from the start. Choose any topic and study in the order that suits you.')}
  <div class="toolbar"><input id="course-search" class="input search" placeholder="Search lessons and topics…" value="${a(ui.search)}"><span class="chip">${actualMastery()} mastered · ${placementOnlyCount()} credited</span><button class="btn ghost small" data-page="placement">Placement test</button></div>
  ${D.modules.map((m,mi)=>{const ls=m.ids.map(id=>lessons.get(id)).filter(l=>!q||(l.title+' '+l.target).toLowerCase().includes(q));if(!ls.length)return '';return `<div class="panel" id="module-${mi}"><div class="panel-title"><div><div class="eyebrow">MODULE ${mi+1} · ${m.ids.length} LESSONS</div><h2 style="margin-top:6px">${m.icon} &nbsp;${a(m.name)}</h2><p class="helper" style="margin-top:7px">${a(m.subtitle)}</p></div><span class="chip">${m.ids.filter(isMastered).length} / ${m.ids.length}</span></div><div class="lesson-list">${ls.map(l=>lessonRow(l,lessonOrder.indexOf(l.id))).join('')}</div></div>`}).join('')}
  `,'Curriculum');}
@@ -236,7 +236,7 @@ function boardControls(b,{engineAction=false}={}){if(!b)return '';
  ${b.moves.length?`<div class="move-list" aria-label="Replay moves">${b.labels.map((m,i)=>`<button class="move ${i===b.moves.length-1?'active':''}" data-action="board-jump" data-ply="${i+1}" title="Replay to this move">${a(m)}</button>`).join('')}</div>`:''}${engineAction?`<button class="btn ghost small" data-action="analyze-position">♞ Ask Stockfish about this position</button>`:''}`;
 }
 function initLesson(id,phase='read'){
- const l=lessons.get(Number(id));if(!l)return;if(!unlocked(l.id)&&!isMastered(l.id)){ui.notice='Finish the preceding lessons to unlock this one.';return curriculum();}
+ const l=lessons.get(Number(id));if(!l)return;
  ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
 }
 const VOCABULARY=[
