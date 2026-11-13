@@ -29,6 +29,8 @@ jobs:
           node-version: '22'
       - name: Run chess rules and website smoke tests
         run: node tests/smoke.cjs
+      - name: Test account lifecycle and cloud sync conflicts
+        run: node tests/accounts.cjs
       - name: Verify Stockfish UCI integration
         run: node tests/uci-wrapper.cjs
       - name: Configure GitHub Pages
