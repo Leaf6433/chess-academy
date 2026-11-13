@@ -11,9 +11,15 @@
   let client = null, notify = () => {}, applyData = () => {}, getData = () => null, pending = null, suppress = false;
   const email = () => state.user && state.user.email || '';
   const SYNC_KEY='chess.academy.cloud.known-v1';
-  const snapshot=()=>JSON.stringify(getData());
+  function fingerprint(){
+    // Compact marker: do not duplicate potentially large progress backups in browser storage.
+    const value=JSON.stringify(getData());
+    let h1=2166136261,h2=2166136261;
+    for(let i=0;i<value.length;i++){const c=value.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^(c+i&65535),16777619);}
+    return value.length+':'+(h1>>>0).toString(16)+':'+(h2>>>0).toString(16);
+  }
   function trusted(){try{return JSON.parse(root.localStorage?.getItem(SYNC_KEY)||'null');}catch(e){return null;}}
-  function remember(){if(!state.user||!state.remote)return;try{root.localStorage?.setItem(SYNC_KEY,JSON.stringify({userId:state.user.id,revision:state.remote.revision,data:snapshot()}));}catch(e){}}
+  function remember(){if(!state.user||!state.remote)return;try{root.localStorage?.setItem(SYNC_KEY,JSON.stringify({userId:state.user.id,revision:state.remote.revision,fingerprint:fingerprint()}));}catch(e){}}
   function clearKnown(){try{root.localStorage?.removeItem(SYNC_KEY);}catch(e){}}
 
   function announce(status, message = '') {state.status = status;state.message = message;notify();}
@@ -52,7 +58,7 @@
       const mark=trusted();
       // A previously chosen device/account pair can resume automatically when
       // it is unchanged locally. New accounts and unsynced local edits require choice.
-      if(state.remote&&mark?.userId===next.id&&mark.data===snapshot()){
+      if(state.remote&&mark?.userId===next.id&&mark.fingerprint===fingerprint()){
         if(state.remote.revision!==mark.revision){
           suppress=true;try{applyData(JSON.parse(JSON.stringify(state.remote.payload)));}finally{suppress=false;}
         }
