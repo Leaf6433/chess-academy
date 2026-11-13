@@ -13,8 +13,9 @@ With the site owner's confirmation of permission to use the Chess.com Neo artwor
 
 All **40 lessons** now feature three expanded theory sections (120 new teaching sections), three reflective practice prompts with revealable answers, a lesson-specific common mistake, two interactive board demonstrations (the original model and a distinct new position), and an estimated **25-minute suggested study route**: 5 minutes for the core explanation, 9 for deeper instruction, 6 for the boards and 5 for recall/guided practice. This is a **suggested pace**, not a timer or a guarantee of exact reading duration.
 
-- Existing **121 guided practice exercises** remain available with hints and feedback.
-- Each lesson now has a **different five-item mastery check**: four new scenario questions and one new interactive board challenge. A learner must get at least four correct **and** solve the board challenge to pass. The 200 mastery items use distinct IDs and are not copied from guided practice; the 40 move challenges are legal and separately validated.
+- **All 40 lessons are available immediately**, in any order. Course modules remain organized as a suggested progression, not an unlock gate; progress and completed mastery checks are tracked per lesson. The Continue button resumes the most recently selected, unfinished lesson.
+- **Guided practice prioritizes board moves.** Each lesson has two additional fresh chessboard challenges, plus any original board exercises and one short concept question. The complete original bank of 121 exercises remains available separately in Practice Studio. Total available practice items: 201 (including the 80 new board drills).
+- **Mastery checks are also board-first.** Each lesson tests three interactive chessboard positions and two scenario questions (200 currently selected mastery questions across 40 lessons). The learner must get at least four of five right, including at least two board moves. The new board positions are legally validated and do not reuse guided-practice board positions verbatim.
 - The optional placement assessment keeps its original questions and scope.
 - The Stockfish evaluation bar appears in lesson study, opening exploration and game review, but remains hidden during mastery checks, placement, puzzles and recall drills.
 - Automated regression checks visit all 40 lessons, verify the extended content and both board examples, answer all 40 independent mastery assessments, and check results and evaluation privacy. Separate account and Stockfish integration tests remain.
@@ -32,7 +33,7 @@ This release focuses on learning continuity and reliability:
 
 **Launch verification:** GitHub Actions must show a green **Publish Chess Academy** run. Afterward reload the published site, confirm the revised pieces, open a lesson and complete a practice question, test Stockfish from Settings, and verify signed-in cloud progress with a backup. Do not clear browser site data.
 
-An offline-capable chess-learning website with a dark-green interface, 40 lessons, 121 practice exercises, placement assessment, strict lesson mastery, spaced reviews, 10 opening examples and recall drills, PGN game import, mistake journal, Stockfish analysis, and computer play.
+An offline-capable chess-learning website with a dark-green interface, 40 freely selectable lessons, 201 available practice exercises, optional individual lesson mastery checks, spaced reviews, 10 opening examples and recall drills, PGN game import, mistake journal, Stockfish analysis, and computer play.
 
 ## Start on Windows
 
