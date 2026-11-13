@@ -21,6 +21,20 @@ function move(uci){const s=t.ui.board.history.at(-1),m=t.C.fromUci(s,uci);assert
 assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
+// All course lessons are freely selectable, independent of earlier mastery.
+assert(t.D.lessons.every(l=>t.ui.page==='dashboard'||!!l),'All 40 lessons available in data');
+nav('curriculum');
+assert.equal((app.innerHTML.match(/class="lesson-row /g)||[]).length,40,'All 40 course entries rendered');
+assert(!app.innerHTML.includes(' · Locked'),'No lessons locked');
+assert(!app.innerHTML.includes('Lessons unlock after proven mastery'),'Curriculum explains free choice');
+nav('lesson',40);
+assert.equal(t.ui.page,'lesson','Lesson 40 can open without earlier mastery');
+assert.equal(t.ui.id,40,'Requested lesson selected');
+assert(!t.data.mastered[1],'Earlier lesson not automatically mastered');
+press('start-mastery');
+assert.equal(t.ui.exam.kind,'mastery','Lesson 40 mastery can open out of order');
+nav('curriculum');
+
 nav('lesson',1);assert.equal(t.ui.page,'lesson');
 assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Lesson teaching uses a full-width reading layout');
 assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Core introduction occupies a full-width panel');
