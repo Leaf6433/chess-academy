@@ -25,6 +25,7 @@ nav('lesson',1);assert.equal(t.ui.page,'lesson');assert(app.innerHTML.includes('
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'),'Official Neo white king image must render');
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/bk.png'),'Official Neo black king image must render');
 assert(app.innerHTML.includes('neo-piece-image'),'All chess piece images use Neo renderer');
+assert(app.innerHTML.includes('neo-piece-fallback'),'Offline fallback still exists for failed image requests');
 assert(app.innerHTML.includes('quick guide'),'Each lesson has a notation guide');
 assert(app.innerHTML.includes('Practice these positions'),'Every lesson offers a guided practice step');
 press('lesson-phase',{phase:'practice'});
