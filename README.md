@@ -44,6 +44,16 @@ Progress is stored **only in this browser's localStorage**. It does **not** sync
 
 **Included:** functional move-legality engine, progression and retry tests, opening practice, PGN mainline importer, local engine connection, sourced course content, backup/export tools, coursebook PDF and source notices. **Not yet included:** cloud login/synchronization, personalized natural-language AI tutor, all-variations PGN support, a complete real-time opening statistics database, or an unlimited auto-generated curriculum.
 
+## Visual teaching and placement progress (November 2026 update)
+
+- Placement questions that include a legal numbered opening sequence now display a replayable board. Use **Start**, **Back**, **Next**, **End**, or click a move to inspect the supplied position without revealing the answer. Board-action questions retain their interactive answer board and provide a collapsed setup replay where available.
+- Lesson demonstrations support **Back / Next move / Restart**, clickable move-history replay, and destination highlighting. Explanations for the next guided move appear alongside the board. This is step-based playback, not timed animation or an arrow-drawing interface.
+- Placement credit and lesson progress are different: credit acknowledges existing knowledge; **Studied** means the learner advanced into practice; **Completed** means every practice question was solved; **Mastered** means the unassisted mastery check was passed. Credited lessons remain accessible for review.
+- Existing local backups load without throwing away placement results. Legacy versions recorded opening a lesson as `studied`; this update migrates those old timestamps into `opened` rather than claiming practice occurred.
+- Browser-local progress still needs regular export. Accounts and cross-device synchronization are **not implemented**, and the website does not ask you for credentials.
+
+The GitHub Pages deployment workflow now runs the headless website smoke test and the Stockfish UCI-wrapper integration test before publishing. These tests cannot substitute for live browser testing of WebAssembly, interactions, mobile layout, or persistence.
+
 ## Important limitations
 
 - The course currently contains **40 authored lessons and 121 exercises** in seven domains. It is substantial but not a complete replacement for years of chess study; more content can be added to the `course-data-v2.js` catalogue.
