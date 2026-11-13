@@ -40,10 +40,10 @@ assert(app.innerHTML.includes('Mastered'));
 // Beginner training (preserves the 121 original course exercises).
 assert.equal(global.FOUNDATION_DRILLS.length,14);
 assert(global.FOUNDATION_DRILLS.filter(q=>q.kind==='board').length>=2);
-assert.equal(new Set(global.FOUNDATION_DRILLS.map(q=>q.id)).size,12);
+assert.equal(new Set(global.FOUNDATION_DRILLS.map(q=>q.id)).size,14);
 for(const q of global.FOUNDATION_DRILLS){
- assert.equal(q.options.length,4);
- assert(q.answer>=0&&q.answer<4);
+ if(q.kind==='mc'){assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
+ else {assert.equal(q.kind,'board');assert(t.C.fromUci(t.C.parseFen(q.fen),q.answer),'legal foundation board answer');}
  t.C.parseFen(q.fen);
  assert(t.D.lessons.some(l=>l.id===q.lesson),'foundation drill has matching lesson');
 }
