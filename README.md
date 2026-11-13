@@ -1,5 +1,18 @@
 # Chess Academy 2.0 — Mastery Course
 
+## Release polish — November 13, 2026
+
+This release focuses on learning continuity and reliability:
+
+- **Learn → Practice → Master:** Every lesson has a guided example board, key takeaways, a quick notation guide, a clearly presented practice plan, and links into its own exercises. After each solved position, a learner can proceed to the next unsolved question or return to the lesson overview. When a lesson's practice is finished, the mastery check is the natural next step.
+- **New board pieces:** All full interactive chessboards use a single 12-piece custom SVG set, recreated with classic rounded Neo/Staunton forms, strong contrast, and the green-and-cream board palette shown in the reference. The assets are original and not the Chess.com proprietary files.
+- **Accounts:** Auth uses the configured Supabase project. A device may resume automatic sync after its owner has explicitly selected a progress copy once and the local data matches the last known sync. Local or cloud divergence requires an explicit choice; local data is never silently discarded.
+- **Better user-facing status:** Header, footer, and settings describe account sync accurately, rather than claiming there is no cloud functionality.
+- **Offline updates:** HTML, JavaScript, and CSS load from the network first when available, falling back to the cached copy while offline. Assets and service worker are release-versioned.
+- **Regression gates:** Website smoke tests, account lifecycle, persistent account sync, and Stockfish UCI integration must succeed before the GitHub Pages workflow publishes. The first three can also be simulated without a browser; live browser and GitHub Pages health are still independent checks.
+
+**Launch verification:** GitHub Actions must show a green **Publish Chess Academy** run. Afterward reload the published site, confirm the revised pieces, open a lesson and complete a practice question, test Stockfish from Settings, and verify signed-in cloud progress with a backup. Do not clear browser site data.
+
 An offline-capable chess-learning website with a dark-green interface, 40 lessons, 121 practice exercises, placement assessment, strict lesson mastery, spaced reviews, 10 opening examples and recall drills, PGN game import, mistake journal, Stockfish analysis, and computer play.
 
 ## Start on Windows
