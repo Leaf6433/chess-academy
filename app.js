@@ -279,6 +279,7 @@ function deepLessonContent(l){
  <h4>${a(t.title)}</h4><p>${a(t.explanation)}</p>
  <details class="deep-check"><summary>Think it through: ${a(t.prompt)}</summary><p>${a(t.answer)}</p></details>
  </div></article>`).join('')}
+ <div class="deep-pitfall"><strong>Common mistake to avoid</strong><p>${a(guide.pitfall||'Check the opponent\'s strongest response before committing.')}</p></div>
  <div class="deep-review"><h4>Before guided practice</h4><p>Close this lesson for a moment. Try to explain the main idea out loud, describe a position where it helps, and name one case where it could fail. Then practice on the board without reading the model move first.</p></div></section>`;
 }
 function lessonSceneOptions(l){
