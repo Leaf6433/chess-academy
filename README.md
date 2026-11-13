@@ -54,6 +54,17 @@ Progress is stored **only in this browser's localStorage**. It does **not** sync
 
 The GitHub Pages deployment workflow now runs the headless website smoke test and the Stockfish UCI-wrapper integration test before publishing. These tests cannot substitute for live browser testing of WebAssembly, interactions, mobile layout, or persistence.
 
+## Foundation-first update and modern chess pieces — November 12, 2026
+
+- Added a **Foundation Training** panel on the dashboard and a dedicated practice filter. It contains **14 original beginner drills**, including playable positions reconstructed from anonymized game records. Topics include avoiding queen blunders, checking king captures, king safety, and passed pawn threats.
+- Foundation practice is **additional reinforcement**, not a replacement for the 40 original lessons or the 121 authored course exercises. It does not automatically award mastery.
+- The course now recommends the **first lesson not passed for mastery**, even if placement awarded credit, for learners who want to reinforce fundamentals.
+- The progress screen and dashboard now distinguish passed mastery checks from placement credit.
+- All chessboards use a consistent set of **12 original vector-piece symbols** in `assets/pieces.svg`, with classic Staunton-inspired silhouettes, modern rounded shapes, cream white pieces, and dark black pieces. The design takes broad visual inspiration from modern web chess boards but **does not copy Chess.com's proprietary artwork**.
+- The offline service-worker cache includes the new SVG asset and foundation exercise file.
+
+**Accounts:** This is still a GitHub Pages static website with browser-local saves. An actual account system needs a backend with user authentication, ownership policies, and cloud persistence. No fake sign-in or unconfigured database is presented.
+
 ## Important limitations
 
 - The course currently contains **40 authored lessons and 121 exercises** in seven domains. It is substantial but not a complete replacement for years of chess study; more content can be added to the `course-data-v2.js` catalogue.
