@@ -149,24 +149,11 @@ function neoPiece(code){
 // A separate Stockfish-based position display for teaching and retrospective review.
 // Never display it during answerable questions, tests, or recall drills.
 const evaluationCache=new Map();
-let evalTimer=null,evalToken=0,evalWorking=false,evalLastRequested='';
+let evalTimer=null,evalWorking=false;
 function evalAllowed(b){
  return !!b&&((ui.page==='lesson'&&ui.phase==='read'&&b.kind==='lesson')||
   (ui.page==='analyze'&&!!ui.game&&b.kind==='analysis')||
   (ui.page==='openings'&&ui.openingPhase==='explore'&&b.kind==='opening'));
-}
-function evalBar(b){
- const fen=C.toFen(bs(b)),saved=evaluationCache.get(fen);
- const pct=saved?.percent??50,white=saved?.label??'…',pending=!saved;
- return `<div class="board-eval-layout"><div class="eval-rail" data-eval-fen="${a(fen)}" title="Stockfish evaluation from White's perspective, not a guaranteed result">
-  <div class="eval-head" aria-hidden="true">BLACK</div>
-  <div class="eval-column" role="img" aria-label="${saved?a(saved.description):'Position evaluation is loading'}">
-   <div class="eval-white" style="height:${pct}%"></div>
-   <span class="eval-score ${pending?'pending':''}">${a(white)}</span>
-  </div>
-  <div class="eval-foot" aria-hidden="true">WHITE</div></div>
-  <div class="board-eval-body">${boardInner(b)}</div></div>
-  <p class="eval-note">Stockfish estimate · White + means White is favored · ${saved?'Depth '+saved.depth:'Analyzing…'}.</p>`;
 }
 function boardInner(b,{viewOnly=false}={}){
  const s=bs(b),valid=C.legal(s),sel=valid.filter(m=>m[0]===b.selected).map(m=>m[1]);const rows=[];
