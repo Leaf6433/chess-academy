@@ -103,11 +103,21 @@ function practiceQuestion(){const q=questions.get(ui.practiceId);if(!q)return pr
 function questionPreviewMoves(q){
  const after=q.fen&&typeof q.fen==='object'&&Array.isArray(q.fen.after)?q.fen.after:null;
  if(after)return after.slice();
- const match=q.prompt.match(/(?:after|following)\s+(1\.\s*d4\s+d5\s+2\.\s*c4)\b/i);
- if(!match)return [];
- const tokens=match[1].replace(/\d+\./g,' ').trim().split(/\s+/);
+ // Parse only a numbered, legal sequence beginning with White's first move.
+ // Stop at the first word that is not a legal move; never include an answer option.
+ const marker=q.prompt.match(/(?:^|[\s,(])1\.\s*(?!\.)([a-hKQRBNO])/);
+ if(!marker)return [];
+ const start=marker.index+marker[0].indexOf('1.');
+ const source=q.prompt.slice(start).replace(/\d+\.(?:\.\.)?/g,' ');
+ const tokens=source.trim().split(/\s+/);
  let state=C.parseFen(C.START_FEN),out=[];
- for(const token of tokens){const m=C.legal(state).find(x=>C.san(state,x).replace(/[+#]/g,'')===token.replace(/[+#]/g,''));if(!m)return [];out.push(C.uci(m));state=C.apply(state,m);}
+ for(const raw of tokens){
+  const token=raw.replace(/^[("']+|[,.?!;:)"']+$/g,'');
+  if(!token)continue;
+  const move=C.legal(state).find(m=>C.san(state,m).replace(/[+#]/g,'')===token.replace(/[+#]/g,''));
+  if(!move)break;
+  out.push(C.uci(move));state=C.apply(state,move);
+ }
  return out;
 }
 function setupQuestionPreview(q){
