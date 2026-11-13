@@ -11,7 +11,7 @@ global.location={href:'http://localhost:8765/index.html'};
 global.navigator={};
 global.document={getElementById(id){return elements.get(id)||null;},addEventListener(name,fn){callbacks[name]=fn;}};
 global.scrollTo=()=>{};
-require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
+require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../board-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
 require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
@@ -200,7 +200,10 @@ assert(rookQuestion.explanation.includes('gaining time'));
 assert.equal(new Set(t.D.exercises.map(q=>q.id)).size,121);
 
 // Systematic content and test-bank validation for every lesson.
+const boardDrills=global.CHESS_ACADEMY_BOARD_DRILLS;
 const masteryBoards=global.CHESS_ACADEMY_MASTERY_BOARDS;
+assert.equal(boardDrills.practice.length,80,'Two additional board exercises per lesson');
+assert.equal(boardDrills.mastery.length,80,'Two additional independent mastery boards per lesson');
 const masteryConcepts=global.CHESS_ACADEMY_MASTERY_CONCEPTS;
 const deepGuides=global.CHESS_ACADEMY_DEEP_DIVES;
 const lessonScenes=global.CHESS_ACADEMY_LESSON_SCENES;
@@ -208,9 +211,9 @@ assert.equal(masteryBoards.length,40);
 assert.equal(masteryConcepts.length,160);
 assert.equal(deepGuides.length,40);
 assert.equal(lessonScenes.length,40);
-const allMastery=[...masteryBoards,...masteryConcepts];
-assert.equal(new Set(allMastery.map(q=>q.id)).size,200);
-const practiceIds=new Set(t.D.exercises.map(q=>q.id));
+const allMastery=[...masteryBoards,...boardDrills.mastery,...masteryConcepts];
+assert.equal(new Set(allMastery.map(q=>q.id)).size,280);
+const practiceIds=new Set([...t.D.exercises,...boardDrills.practice].map(q=>q.id));
 assert(allMastery.every(q=>!practiceIds.has(q.id)),'Mastery uses independent questions');
 for(let id=1;id<=40;id++){
  const guide=deepGuides.find(g=>g.id===id);
@@ -218,6 +221,11 @@ for(let id=1;id<=40;id++){
  const quest=masteryConcepts.filter(q=>q.lesson===id);
  const board=masteryBoards.find(q=>q.lesson===id);
  assert(guide?.topics?.length===3,'Three extended lesson topics '+id);
+ assert.equal(boardDrills.practice.filter(q=>q.lesson===id).length,2,'Two hands-on guided practice boards for lesson '+id);
+ assert.equal(boardDrills.mastery.filter(q=>q.lesson===id).length,2,'Two extra hands-on mastery boards for lesson '+id);
+ const allPositions=[...boardDrills.practice.filter(q=>q.lesson===id),board,...boardDrills.mastery.filter(q=>q.lesson===id)];
+ for(const p of allPositions){assert.equal(p.kind,'board');assert(t.C.fromUci(t.C.parseFen(t.exFen(p)),p.answer),'Legal board move '+p.id);}
+ assert.equal(new Set(allPositions.map(q=>t.exFen(q).split(' ').slice(0,2).join(' '))).size,5,'No board positions duplicated inside practice and mastery '+id);
  assert(guide.pitfall?.length>45,'Each lesson has a realistic mistake to avoid '+id);
  assert(guide.topics.every(q=>q.explanation?.length>100&&q.prompt&&q.answer),'Each topic needs instructive content and an answer '+id);
  assert(sample?.line?.length>0,'Interactive second board example '+id);
@@ -228,10 +236,6 @@ for(let id=1;id<=40;id++){
  assert(t.C.fromUci(t.C.parseFen(t.exFen(board)),board.answer),'Legal mastery move '+id);
  for(const q of quest){assert.equal(q.kind,'mc');assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
  // The user must be able to open the independent test, answer it and see a score.
- for(const prereq of t.D.modules.flatMap(module=>module.ids)){
-  if(prereq===id)break;
-  t.data.mastered[prereq] ||= {at:Date.now()};
- }
  nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
  assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Full-width lesson layout '+id);
  assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Spacious core teaching '+id);
@@ -242,6 +246,10 @@ for(let id=1;id<=40;id++){
  assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
  press('start-mastery');
  assert.equal(t.ui.exam.items.length,5,'Five new assessment questions for lesson '+id);
+ assert.equal(t.ui.exam.items.filter(q=>q.kind==='board').length,3,'Mastery prioritizes 3 board moves for lesson '+id);
+ assert.equal(t.ui.exam.items.filter(q=>q.kind==='mc').length,2,'Mastery includes just 2 concept questions for lesson '+id);
+ press('lesson-phase',{phase:'practice'});assert(app.innerHTML.includes('BOARD MOVE')||app.innerHTML.includes('Choose a move on the board'),'Practice contains interactive boards '+id);
+ press('start-mastery');
  assert(t.ui.exam.items.every(q=>!practiceIds.has(q.id)),'No recycled practice question '+id);
  assert(!app.innerHTML.includes('class="eval-rail"'),'Mastery bar must stay hidden '+id);
  for(const q of t.ui.exam.items){
@@ -296,4 +304,4 @@ local=showLocalStockfish();
 assert(local.indexOf('id="engine-response"')>local.indexOf('Analyze position'),'Play result appears under board actions');
 assert(local.indexOf('id="engine-response"')<local.indexOf('ENGINE OPPONENT'),'Play result is not appended below the whole screen');
 t.ui.engineResult=null;
-console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings, forty detailed lessons, forty independent mastery assessments');
+console.log('PASS: open-access lessons, board-first practice, independent mastery, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings, forty detailed lessons, forty independent mastery assessments');
