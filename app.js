@@ -71,9 +71,9 @@ function dashboardModule(m,i){
  const mastered=m.ids.filter(id=>!!data.mastered[id]).length,credited=m.ids.filter(id=>!!data.placementCredit[id]&&!data.mastered[id]).length;
  const progress=percent(mastered,m.ids.length),isCurrent=m.ids.includes(nextLesson());
  const locked=!m.ids.some(id=>unlocked(id)||isMastered(id));
- const glyph=['♔','♘','♙','♜','♗','♕','♞'][i]||'♟';
+ const piece=['wK','wN','wP','bR','wB','bQ','wN'][i]||'wP';
  return `<button type="button" class="studio-course-card ${isCurrent?'is-current':''} ${locked?'is-locked':''}" data-page="curriculum" data-module="${i}" aria-label="View ${a(m.name)} lessons">
-  <div class="studio-course-art art-${i%4}" aria-hidden="true"><span>${glyph}</span></div>
+  <div class="studio-course-art art-${i%4}" aria-hidden="true"><svg viewBox="0 0 100 100" focusable="false"><use href="assets/pieces.svg#${piece}"></use></svg></div>
   <div class="studio-course-copy"><div class="studio-course-heading"><strong>${a(m.name)}</strong><span class="studio-course-state">${mastered===m.ids.length?'Mastered':locked?'Upcoming':isCurrent?'In progress':mastered?'Continue':'Not started'}</span></div>
   <p>${a(m.subtitle)}</p>
   <div class="studio-course-progress"><span class="progress-bar"><span style="width:${progress}%"></span></span><em>${progress}%</em></div>
@@ -113,7 +113,7 @@ function dashboard(){
  <aside class="study-rail">
   <section class="studio-card study-continue"><h2><span class="studio-heading-icon">▷</span> Continue learning</h2>
    <button class="study-continue-link" data-page="lesson" data-id="${id}">
-    <span class="study-mini-art" aria-hidden="true">♔</span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
+    <span class="study-mini-art" aria-hidden="true"><svg viewBox="0 0 100 100" focusable="false"><use href="assets/pieces.svg#wK"></use></svg></span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
    </button>
   </section>
   <section class="studio-card study-progress"><h2><span class="studio-heading-icon">♛</span> Your progress</h2><div class="study-progress-inner">
