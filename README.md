@@ -63,7 +63,7 @@ The GitHub Pages deployment workflow now runs the headless website smoke test an
 - All chessboards use a consistent set of **12 original vector-piece symbols** in `assets/pieces.svg`, with classic Staunton-inspired silhouettes, modern rounded shapes, cream white pieces, and dark black pieces. The design takes broad visual inspiration from modern web chess boards but **does not copy Chess.com's proprietary artwork**.
 - The offline service-worker cache includes the new SVG asset and foundation exercise file.
 
-**Accounts:** This is still a GitHub Pages static website with browser-local saves. An actual account system needs a backend with user authentication, ownership policies, and cloud persistence. No fake sign-in or unconfigured database is presented.
+**Accounts:** Browser account UI, Supabase Auth calls, local/cloud progress selection, sync conflict detection, schema, RLS policies, and tests are committed. **Not activated:** Supabase is not connected/configured; no real signup, signin, or online sync can succeed until a real project is provisioned and the public configuration is added. Local progress remains available. See [`supabase/README.md`](supabase/README.md) for setup, database ownership tests, and go-live checklist.
 
 ## Important limitations
 
