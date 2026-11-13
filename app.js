@@ -306,8 +306,42 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
  <div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
-  const body=`<div class="lesson-time-plan"><strong>Suggested 25-minute study route</strong><span>Core ideas · 5 min</span><span>Detailed topics · 9 min</span><span>Two boards · 6 min</span><span>Recall and practice · 5 min</span></div><div class="layout-board"><div>${lessonSceneOptions(l)}${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div><div class="panel" style="margin-bottom:0"><div class="eyebrow">LEARN</div><h2 style="margin:8px 0 15px">The key idea</h2><p class="helper" style="margin-bottom:12px">Use Next move to watch the example unfold, Back to review it, or select a played move below the board to return to that position.</p><div class="lesson-notes">${l.body.map(p=>`<p>${a(p)}</p>`).join('')}</div>${deepLessonContent(l)}${lessonVocabulary(l)}${l.worked?`<div class="feedback info">${a(l.worked)}</div>`:''}<div class="divider"></div><h3>Remember these ideas</h3><div class="checklist" style="margin:13px 0">${l.takeaways.map(t=>`<div class="check"><span class="checkmark">✓</span><span>${a(t)}</span></div>`).join('')}</div><details class="notation-help"><summary>New to chess notation? See a quick guide</summary><div class="helper"><strong>Piece letters:</strong> K = king, Q = queen, R = rook, B = bishop, N = knight. Pawns use their destination square (like e4). <strong>x</strong> means capture, <strong>+</strong> check, <strong>#</strong> checkmate, and <strong>O-O</strong> kingside castling. Select the board's Next button to see each move rather than imagining it.</div></details><div class="lesson-coach"><div class="eyebrow">NEXT STEP · APPLY IT</div><p class="helper" style="margin:9px 0 12px">Knowing the idea is the start. Work through the practice positions for this lesson, then prove it with an unassisted mastery check.</p><button class="btn" data-action="lesson-phase" data-phase="practice">Practice these positions →</button></div><div class="section-label">THEORY & FURTHER READING</div>${l.refs.map(ref=>{const s=D.sources.find(x=>x.id===ref);return s?`<div style="margin-bottom:7px"><a class="source-link" target="_blank" rel="noopener noreferrer" href="${a(s.url)}">${a(s.title)} ↗</a></div>`:''}).join('')}<div style="margin-top:9px"><a class="source-link" href="https://lichess.org/training/themes" target="_blank" rel="noopener noreferrer">Lichess tactical themes ↗</a></div></div></div>`;
-  return wrap(top+body+(ui.engineResult?engineResponse():'') ,'Lesson');
+  const scene=lessonScenes.get(l.id);
+  const body=`<div class="lesson-reading-layout">
+   <div class="lesson-time-plan"><strong>Suggested 25-minute study route</strong><span>Core ideas · 5 min</span><span>Detailed topics · 9 min</span><span>Two boards · 6 min</span><span>Recall and practice · 5 min</span></div>
+   <section class="panel lesson-reading-panel lesson-intro" aria-label="Lesson introduction">
+    <div class="eyebrow">LEARN · CORE CONCEPTS</div>
+    <h2>The key idea</h2>
+    <div class="lesson-notes">${l.body.map(p=>`<p>${a(p)}</p>`).join('')}</div>
+   </section>
+   <section class="panel lesson-reading-panel lesson-workshop" aria-label="Interactive chess walkthroughs">
+    <div class="lesson-section-head"><span class="eyebrow">PRACTICE THE IDEA</span><h2>See it on the board</h2><p class="helper">Study each position, predict the next move, and use the board controls to see why it works.</p></div>
+    <div class="lesson-workshop-layout">
+     <div class="lesson-workshop-board">${lessonSceneOptions(l)}${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}</div>
+     <div class="lesson-workshop-guide">
+      <h3>${ui.lessonScene===1&&scene?a(scene.title):'Follow the main example'}</h3>
+      <p class="helper">${ui.lessonScene===1&&scene?a(scene.question):'Before each move, identify the opponent’s threat and try to predict the next move. Then check the explanation in the move list.'}</p>
+      ${ui.lessonScene===0&&l.worked?`<div class="feedback info">${a(l.worked)}</div>`:''}
+      <div class="lesson-workshop-questions"><strong>As you replay, ask yourself:</strong>
+       <ul><li>What changed after the last move?</li><li>What threats or useful squares appear?</li><li>What might the opponent play next?</li></ul>
+      </div>
+     </div>
+    </div>
+   </section>
+   <section class="panel lesson-reading-panel lesson-theory" aria-label="In-depth teaching">
+     ${deepLessonContent(l)}
+     ${lessonVocabulary(l)}
+   </section>
+   <section class="panel lesson-reading-panel lesson-wrapup" aria-label="Lesson summary and next steps">
+     <div class="eyebrow">PUT IT TOGETHER</div>
+     <h2>Remember these ideas</h2>
+     <div class="checklist lesson-takeaways">${l.takeaways.map(t=>`<div class="check"><span class="checkmark">✓</span><span>${a(t)}</span></div>`).join('')}</div>
+     <details class="notation-help"><summary>New to chess notation? See a quick guide</summary><div class="helper"><strong>Piece letters:</strong> K = king, Q = queen, R = rook, B = bishop, N = knight. Pawns use their destination square (like e4). <strong>x</strong> means capture, <strong>+</strong> check, <strong>#</strong> checkmate, and <strong>O-O</strong> kingside castling. Select Next move on the board to see how each move works.</div></details>
+     <div class="lesson-coach"><div class="eyebrow">NEXT STEP · APPLY IT</div><p class="helper" style="margin:9px 0 12px">Knowing the idea is the start. Work through the guided practice for this lesson, then prove it with an unassisted mastery check.</p><button class="btn" data-action="lesson-phase" data-phase="practice">Practice these positions →</button></div>
+     <div class="lesson-references"><div class="section-label">THEORY &amp; FURTHER READING</div>${l.refs.map(ref=>{const s=D.sources.find(x=>x.id===ref);return s?`<div style="margin-bottom:7px"><a class="source-link" target="_blank" rel="noopener noreferrer" href="${a(s.url)}">${a(s.title)} ↗</a></div>`:''}).join('')}<div style="margin-top:9px"><a class="source-link" href="https://lichess.org/training/themes" target="_blank" rel="noopener noreferrer">Lichess tactical themes ↗</a></div></div>
+   </section>
+  </div>`;
+  return wrap(top+body+(ui.engineResult?engineResponse():''),'Lesson');
  }
  if(ui.phase==='practice'){
   const lqs=l.exercises;
