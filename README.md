@@ -1,5 +1,14 @@
 # Chess Academy 2.0 — Mastery Course
 
+## Official Neo piece assets
+
+With the site owner's confirmation of permission to use the Chess.com Neo artwork, the board renderer uses Chess.com's **original Neo PNG assets** at `https://assets-themes.chess.com/image/ejgfv/150/{piece}.png`, with filenames `wk,wq,wr,wb,wn,wp,bk,bq,br,bb,bn,bp`. These apply to **all interactive boards** and the course/continuation previews.
+
+- The primary pieces are loaded from Chess.com's asset CDN while online; this means the exact Neo artwork currently has an **external network dependency**. If the image URL is unavailable, an alternative Chess.com image endpoint is attempted and then the Academy's cached vector fallback is shown.
+- The old `assets/pieces.svg` remains solely as the offline/unavailable-CDN fallback; it is not the official Neo artwork.
+- The chess rules, board layout, accounts, and existing browser progress data are unchanged.
+- Test that `wk.png` and `bk.png` appear correctly in a browser after the latest GitHub Pages deployment. Headless DOM tests verify URL wiring, but cannot guarantee third-party CDN accessibility in each browser.
+
 ## Release polish — November 13, 2026
 
 This release focuses on learning continuity and reliability:
