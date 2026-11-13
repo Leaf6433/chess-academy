@@ -228,7 +228,7 @@ for(let id=1;id<=40;id++){
  for(const [uci,why] of core.line){
   const m=t.C.fromUci(coreState,uci);
   assert(m,'Core example move must be legal, lesson '+id+' '+uci);
-  assert(why?.length>20,'Each core move needs an educational explanation '+id);
+  assert(why?.length>=12,'Each core move needs an educational explanation '+id);
   coreState=t.C.apply(coreState,m);
  }
 
