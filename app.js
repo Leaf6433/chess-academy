@@ -1,14 +1,15 @@
 /* Chess Academy 2 — original browser learning platform. Stockfish.js engine is third-party GPLv3. */
 (()=>{
 'use strict';
-const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],masteryBoards=window.CHESS_ACADEMY_MASTERY_BOARDS||[],masteryConcepts=window.CHESS_ACADEMY_MASTERY_CONCEPTS||[],deepGuides=new Map((window.CHESS_ACADEMY_DEEP_DIVES||[]).map(g=>[g.id,g])),lessonScenes=new Map((window.CHESS_ACADEMY_LESSON_SCENES||[]).map(g=>[g.id,g])),engine=new window.EngineService();
+const C=window.Chess,D=window.COURSE,foundation=window.FOUNDATION_DRILLS||[],boardDrills=window.CHESS_ACADEMY_BOARD_DRILLS||{practice:[],mastery:[]},masteryBoards=window.CHESS_ACADEMY_MASTERY_BOARDS||[],masteryConcepts=window.CHESS_ACADEMY_MASTERY_CONCEPTS||[],deepGuides=new Map((window.CHESS_ACADEMY_DEEP_DIVES||[]).map(g=>[g.id,g])),lessonScenes=new Map((window.CHESS_ACADEMY_LESSON_SCENES||[]).map(g=>[g.id,g])),engine=new window.EngineService();
 if(!C||!D)throw Error('Missing Chess Academy course dependencies.');
 const STORAGE='chess.academy.v2.progress';
 const $=id=>document.getElementById(id);
 const escapeHTML=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const a=x=>escapeHTML(x);
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),questions=new Map([...D.exercises,...foundation,...masteryBoards,...masteryConcepts].map(e=>[e.id,e]));
+const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...D.exercises,...boardDrills.practice],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts].map(e=>[e.id,e]));
+function lessonExercises(l){return [...boardDrills.practice.filter(q=>q.lesson===l.id),...l.exercises];}
 const starter=()=>({version:2,mastered:{},placementCredit:{},opened:{},studied:{},completed:{},attempts:{},review:{},practiceSolved:{},lastLesson:1,placement:null,starred:[],repertoire:[],openingDrills:{},games:[],journal:[],settings:{mode:'lite',depth:11,reviewLimit:40},created:Date.now()});
 function load(){try{const raw=JSON.parse(localStorage.getItem(STORAGE));if(raw?.version===2)return {...starter(),...raw,opened:{...(raw.opened||raw.studied||{})},studied:raw.opened?raw.studied||{}:{},completed:raw.completed||{},settings:{...starter().settings,...raw.settings}};}catch(e){}const first=starter();try{const older=JSON.parse(localStorage.getItem('chess.academy.800-1200.progress.v1'));if(older){first.studied=Object.fromEntries((older.completed||[]).map(x=>[x,Date.now()]));first.lastLesson=Number(older.recent)||1;}}catch(e){}return first;}
 let data=load();
@@ -85,7 +86,7 @@ function dashboard(){
  const id=nextLesson(),l=lessons.get(id),due=dueCount(),learned=actualMastery(),total=lessonOrder.length;
  const studied=Object.keys(data.studied||{}).length,practiced=Object.keys(data.practiceSolved||{}).length;
  const foundationDone=foundation.filter(q=>!!data.practiceSolved[q.id]).length;
- const recent=recentActivity(),lessonPractice=l.exercises.filter(q=>!!data.practiceSolved[q.id]).length;
+ const recent=recentActivity(),lessonPractice=lessonExercises(l).filter(q=>!!data.practiceSolved[q.id]).length;
  const score=percent(learned,total);
  const nextReview=Object.keys(data.review).find(x=>data.review[x].due<=now());
  const heading=l.title;
@@ -113,7 +114,7 @@ function dashboard(){
  <aside class="study-rail">
   <section class="studio-card study-continue"><h2><span class="studio-heading-icon">▷</span> Continue learning</h2>
    <button class="study-continue-link" data-page="lesson" data-id="${id}">
-    <span class="study-mini-art" aria-hidden="true">${neoPiece('wk')}</span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${l.exercises.length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,l.exercises.length)}%"></span></span></span><span aria-hidden="true">›</span>
+    <span class="study-mini-art" aria-hidden="true">${neoPiece('wk')}</span><span class="study-continue-copy"><strong>${a(heading)}</strong><small>Lesson ${lessonOrder.indexOf(id)+1} of ${total} · ${lessonPractice}/${lessonExercises(l).length} practice checks</small><span class="progress-bar"><span style="width:${percent(lessonPractice,lessonExercises(l).length)}%"></span></span></span><span aria-hidden="true">›</span>
    </button>
   </section>
   <section class="studio-card study-progress"><h2><span class="studio-heading-icon">♛</span> Your progress</h2><div class="study-progress-inner">
@@ -301,7 +302,7 @@ function loadLessonScene(index){
  ui.board=makeBoard(exFen(choice),choice.line,'lesson');ui.board.flip=flip;
  ui.engineResult=null;render();
 }
-function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=l.exercises.length;
+function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=lessonExercises(l).length;
  const top=`${header(`MODULE ${l.module+1} / LESSON ${index+1}`,l.title,l.target)}<div class="btn-row" style="margin:-4px 0 18px"><span class="chip ${done?'':'gold'}">${done?'✓ Mastered':data.completed[l.id]?'✓ Practice completed · mastery pending':data.studied[l.id]?'◉ Studied · mastery pending':data.placementCredit[l.id]?'◇ Placement credit · not studied':'Mastery required'}</span><span class="chip grey">${l.length} min target · ${qCount} checks</span><button class="btn ghost small" data-page="curriculum">← All lessons</button></div>
  <div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
@@ -344,9 +345,9 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
   return wrap(top+body,'Lesson');
  }
  if(ui.phase==='practice'){
-  const lqs=l.exercises;
+  const lqs=lessonExercises(l);
   const solved=lqs.filter(e=>!!data.practiceSolved[e.id]).length;
-  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Solve the concept checks. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">The mastery check uses five new challenges. Pass at least four of five, including the interactive board move, without hints. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div></div>`,'Lesson');
+  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Solve the concept checks. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">The mastery check uses three new interactive board positions and two concept questions. Pass at least four of five, including at least two board moves, without hints. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div></div>`,'Lesson');
  }
  return wrap(top,'Lesson');
 }
@@ -355,14 +356,14 @@ function openPractice(id,mode='practice'){const e=questions.get(id);if(!e)return
 function nextRelevantQuestion(q){
  if(!q)return null;
  if(ui.practiceOrigin==='lesson'){
-  const l=lessons.get(q.lesson),remaining=l?.exercises.filter(e=>!data.practiceSolved[e.id]&&e.id!==q.id)||[];
+  const l=lessons.get(q.lesson),remaining=l?lessonExercises(l).filter(e=>!data.practiceSolved[e.id]&&e.id!==q.id):[];
   return remaining[0]||null;
  }
- const bank=ui.filter==='foundation'?foundation:D.exercises;
+ const bank=ui.filter==='foundation'?foundation:practiceBank;
  return bank.find(e=>e.id!==q.id&&!data.practiceSolved[e.id])||null;
 }
 function lessonPracticeSummary(l){
- const list=l.exercises;
+ const list=lessonExercises(l);
  const solved=list.filter(e=>!!data.practiceSolved[e.id]).length;
  const next=list.find(e=>!data.practiceSolved[e.id]);
  const done=!!data.mastered[l.id];
@@ -423,7 +424,7 @@ function questionReplay(){
 
 function conceptOrBoard(q){if(ui.preview&&q.kind==='mc')return questionReplay();if(ui.preview&&q.kind==='board')return boardHTML(ui.board)+`<details style="margin-top:12px"><summary class="helper" style="cursor:pointer">Replay how this position arose (no answer shown)</summary>${questionReplay()}</details>`;return q.kind==='mc'&&exFen(q)===C.START_FEN?`<div class="concept-card"><div class="concept-glyph">♞</div><div class="eyebrow">CHESS REASONING</div><h3>Think before choosing</h3><p class="helper">Apply what you learned. The question, not an unrelated board, is your focus here.</p></div>`:boardHTML(ui.board);}
 function schedule(qid,correct,hinted=false){const prior=data.review[qid]||{streak:0,interval:1};const streak=(correct&&!hinted)?prior.streak+1:0;const intervals=[1,1,3,7,14,30,60];const days=intervals[Math.min(streak,intervals.length-1)];data.review[qid]={streak,interval:days,due:now()+days*86400000,seen:(prior.seen||0)+1};save();}
-function solvePractice(good,explanation,assisted=false){const id=ui.practiceId;if(good){ui.feedback=explanation;ui.feedbackGood=!assisted;data.practiceSolved[id]={at:now(),assisted:!!assisted};const lesson=lessons.get(questions.get(id)?.lesson);if(lesson&&lesson.exercises.every(e=>data.practiceSolved[e.id]))data.completed[lesson.id]={at:now()};schedule(id,!assisted,assisted);}else{ui.attemptWrong++;schedule(id,false);save();}render();}
+function solvePractice(good,explanation,assisted=false){const id=ui.practiceId;if(good){ui.feedback=explanation;ui.feedbackGood=!assisted;data.practiceSolved[id]={at:now(),assisted:!!assisted};const lesson=lessons.get(questions.get(id)?.lesson);if(lesson&&lessonExercises(lesson).every(e=>data.practiceSolved[e.id]))data.completed[lesson.id]={at:now()};schedule(id,!assisted,assisted);}else{ui.attemptWrong++;schedule(id,false);save();}render();}
 function startAssessment(kind,id=null){
  let items;
  if(kind==='placement'){
@@ -435,13 +436,13 @@ function startAssessment(kind,id=null){
   const l=lessons.get(Number(id));if(!l)return;if(!canResume(l.id))return;
   // Assessment is a transfer test, NOT a replay of guided practice.
   // Four new conceptual scenarios come first, then one new interactive move.
-  const independent=masteryConcepts.filter(q=>q.lesson===l.id);
-  const applied=masteryBoards.filter(q=>q.lesson===l.id);
-  if(independent.length!==4||applied.length!==1){
+  const independent=masteryConcepts.filter(q=>q.lesson===l.id).slice(0,2);
+  const applied=[...masteryBoards.filter(q=>q.lesson===l.id),...boardDrills.mastery.filter(q=>q.lesson===l.id)];
+  if(independent.length!==2||applied.length!==3){
    ui.notice='This lesson’s independent mastery test is unavailable. Guided practice is still available.';
    return render();
   }
-  items=[...independent,...applied];
+  items=[applied[0],independent[0],applied[1],independent[1],applied[2]];
  }
  ui.exam={kind,lessonId:id,items,index:0,results:[],answered:null,showReview:false};ui.page=kind==='placement'?'placement':'lesson';if(kind==='mastery')ui.phase='mastery';setupExamBoard();render();
 }
@@ -452,9 +453,8 @@ function finishAssessment(){const ex=ui.exam;if(!ex)return;
  ex.showReview=true;
  const score=ex.results.filter(x=>x.ok).length,total=ex.results.length,ratio=score/total;
  if(ex.kind==='mastery'){
-  const l=lessons.get(ex.lessonId),hasBoard=ex.items.some(e=>e.kind==='board');
-  const missedBoard=hasBoard&&ex.results.some(r=>questions.get(r.id).kind==='board'&&!r.ok);
-  ex.passed=ratio>=.8&&!missedBoard;
+  const l=lessons.get(ex.lessonId),boardCorrect=ex.results.filter(r=>questions.get(r.id)?.kind==='board'&&r.ok).length;
+  ex.passed=ratio>=.8&&boardCorrect>=2;
   data.attempts[l.id]=[...(data.attempts[l.id]||[]),{time:now(),correct:score,total,passed:ex.passed}].slice(-20);
   if(ex.passed){data.mastered[l.id]={at:now(),score,total};data.studied[l.id]=data.studied[l.id]||now();data.completed[l.id]=data.completed[l.id]||{at:now()};data.lastLesson=nextLesson();}
   // Any incorrect items are already scheduled; correctly answered items get delayed retention checks too.
@@ -474,7 +474,7 @@ function finishAssessment(){const ex=ui.exam;if(!ex)return;
 function assessmentPage(pre=''){
  const x=ui.exam;if(!x)return '';
  if(x.showReview){const correct=x.results.filter(v=>v.ok).length;
-  return `${pre}<div class="panel" style="max-width:830px"><div class="eyebrow">${x.kind==='placement'?'PLACEMENT RESULTS':'MASTERY RESULTS'}</div><h1 style="margin:10px 0">${x.kind==='mastery'?(x.passed?'Lesson mastered!':'Review and retry'): 'Your starting-point assessment'}</h1><div style="font:800 49px var(--head);color:var(--green2);margin:12px 0">${correct}/${x.results.length}</div><p class="panel-desc">${x.kind==='placement'?'This diagnostic identifies familiar ideas. It is not an official chess rating, and only very strong foundational performance earns limited placement credit.':x.passed?'You demonstrated this lesson without hints. Its concepts will appear again in spaced review.':'This check did not meet the 80% threshold or missed a board exercise. Practice the missed ideas and try again. No penalty for repeating.'}</p>${x.kind==='placement'?`<div class="grid-lines">${data.placement.domains.map(b=>`<div>${renderBars(D.modules[b.module].name,b.correct,b.total)}</div>`).join('')}</div>`:''}
+  return `${pre}<div class="panel" style="max-width:830px"><div class="eyebrow">${x.kind==='placement'?'PLACEMENT RESULTS':'MASTERY RESULTS'}</div><h1 style="margin:10px 0">${x.kind==='mastery'?(x.passed?'Lesson mastered!':'Review and retry'): 'Your starting-point assessment'}</h1><div style="font:800 49px var(--head);color:var(--green2);margin:12px 0">${correct}/${x.results.length}</div><p class="panel-desc">${x.kind==='placement'?'This diagnostic identifies familiar ideas. It is not an official chess rating, and only very strong foundational performance earns limited placement credit.':x.passed?'You demonstrated this lesson without hints. Its concepts will appear again in spaced review.':'This check requires at least 80% overall and at least two correct board moves. Practice the missed ideas and try again. No penalty for repeating.'}</p>${x.kind==='placement'?`<div class="grid-lines">${data.placement.domains.map(b=>`<div>${renderBars(D.modules[b.module].name,b.correct,b.total)}</div>`).join('')}</div>`:''}
  <div class="section-label">YOUR ANSWERS</div><div class="grid-lines">${x.results.map(v=>`<div class="mini-panel"><span class="chip ${v.ok?'':'red'}">${v.ok?'✓ Correct':'✕ Review'}</span><p class="helper" style="margin-top:8px">${a(questions.get(v.id).prompt)}</p>${!v.ok?`<p style="font-size:12px;margin-top:8px">${a(questions.get(v.id).explanation)}</p>`:''}</div>`).join('')}</div>
  <div class="btn-row" style="margin-top:20px">${x.kind==='placement'?`<button class="btn" data-page="curriculum">Go to your course →</button>`:`<button class="btn" data-page="lesson" data-id="${x.lessonId}">${x.passed?'Continue learning →':'Return to lesson →'}</button><button class="btn secondary" data-action="start-mastery" data-id="${x.lessonId}">Retry this assessment</button>`}</div></div>`;
  }
@@ -485,7 +485,7 @@ function assessmentPage(pre=''){
  const title=x.kind==='placement'?'Placement assessment':'Lesson mastery assessment';
  const progressMeter=x.items.map((q,i)=>`<span class="${i<x.results.length?(x.results[i].ok?'good':'wrong'):''}"></span>`).join('');
  return `${pre||header('DIAGNOSTIC','Find your strengths','Answer without hints. Your score will help choose a sensible starting point.')}
- <div class="cols-2"><div class="panel">${x.kind==='mastery'?'<p class="helper">Five new questions and positions—not the guided practice answers. No hints or engine evaluation.</p>':''}<div class="eyebrow">QUESTION ${x.index+1} OF ${x.items.length}</div><div class="test-meter">${progressMeter}</div><h2 style="margin:15px 0">${a(q.prompt)}</h2>${q.kind==='mc'?controls:''}${answered?`<div class="feedback ${x.answered?'':'bad'}">${x.answered?'✓ Correct.':'Not quite.'} ${a(q.explanation)}</div><button class="btn" data-action="exam-next">${x.index===x.items.length-1?'See my results →':'Next question →'}</button>`:'<p class="helper" style="margin-top:10px">Choose carefully. No hints in assessments.</p>'}</div><div><div class="panel"><div class="eyebrow">${q.kind==='board'?'INTERACTIVE POSITION':'CONCEPT CHECK'}</div>${conceptOrBoard(q)}</div>${x.kind==='placement'?'<p class="helper">This assessment covers a broad range of topics, so tougher questions are normal.</p>':''}</div></div>`;
+ <div class="cols-2"><div class="panel">${x.kind==='mastery'?'<p class="helper">Three new board positions and two concept questions. No hints or engine evaluation.</p>':''}<div class="eyebrow">QUESTION ${x.index+1} OF ${x.items.length}</div><div class="test-meter">${progressMeter}</div><h2 style="margin:15px 0">${a(q.prompt)}</h2>${q.kind==='mc'?controls:''}${answered?`<div class="feedback ${x.answered?'':'bad'}">${x.answered?'✓ Correct.':'Not quite.'} ${a(q.explanation)}</div><button class="btn" data-action="exam-next">${x.index===x.items.length-1?'See my results →':'Next question →'}</button>`:'<p class="helper" style="margin-top:10px">Choose carefully. No hints in assessments.</p>'}</div><div><div class="panel"><div class="eyebrow">${q.kind==='board'?'INTERACTIVE POSITION':'CONCEPT CHECK'}</div>${conceptOrBoard(q)}</div>${x.kind==='placement'?'<p class="helper">This assessment covers a broad range of topics, so tougher questions are normal.</p>':''}</div></div>`;
 }
 function placement(){if(ui.exam?.kind==='placement')return wrap(assessmentPage(),'Placement');const previous=data.placement;
  wrap(`${header('PERSONALIZED ENTRY','Placement assessment','An unassisted diagnostic helps locate your strengths. It is not an official chess rating.')}
@@ -494,14 +494,14 @@ function renderPracticeFilters(){return [['foundation',`★ Foundation (${founda
 function practicePage(){
  const due=Object.keys(data.review).filter(id=>data.review[id].due<=now());
  const journalDue=ui.filter==='due'?data.journal.filter(m=>due.includes(m.id)):[];
- let bank=ui.filter==='foundation'?foundation.slice().sort((a,b)=>((data.practiceSolved[a.id]?1:0)-(data.practiceSolved[b.id]?1:0))||((data.review[a.id]?.streak||0)-(data.review[b.id]?.streak||0))||(a.priority-b.priority)):D.exercises;
+ let bank=ui.filter==='foundation'?foundation.slice().sort((a,b)=>((data.practiceSolved[a.id]?1:0)-(data.practiceSolved[b.id]?1:0))||((data.review[a.id]?.streak||0)-(data.review[b.id]?.streak||0))||(a.priority-b.priority)):practiceBank;
  if(ui.filter==='due')bank=due.map(id=>questions.get(id)).filter(Boolean);
  if(ui.filter==='tactics')bank=bank.filter(e=>lessons.get(e.lesson).module===1);
  if(ui.filter==='opening')bank=bank.filter(e=>[2,3].includes(lessons.get(e.lesson).module));
  if(ui.filter==='endgame')bank=bank.filter(e=>lessons.get(e.lesson).module===5);
  if(ui.filter==='mistakes')bank=[];
  bank=bank.slice(0,ui.filter==='all'?70:90);
- wrap(`${header('PRACTICE STUDIO','Train what matters','Choose specific skills or work through reviews scheduled from your mistakes. Most activities require only moves or short selections.')}
+ wrap(`${header('PRACTICE STUDIO','Train what matters','Choose specific skills or work through reviews scheduled from your mistakes. Most activities are interactive board positions.')}
  ${ui.filter==='foundation'?`<div class="panel" style="margin-bottom:14px"><span class="chip gold">BEGINNER TRAINING · ${foundation.filter(e=>data.practiceSolved[e.id]).length}/${foundation.length} PRACTICED</span><h2 style="margin:12px 0 7px">Practice skills that decide real games</h2><p class="panel-desc">Short, visually grounded questions about hanging queens, blunder checks, king safety, and passed pawns. Some positions are reconstructed from actual anonymized game records. These drills reinforce the 40-lesson course; they do not count as unassisted lesson mastery.</p><div class="btn-row"><button class="btn ghost small" data-page="lesson" data-id="1">Review blunder-prevention lesson</button><button class="btn ghost small" data-page="analyze">Analyze a PGN →</button></div></div>`:''}
  <div class="toolbar">${renderPracticeFilters()}</div>
  ${ui.filter==='mistakes'?`${data.journal.length?`<div class="grid-lines">${data.journal.slice().reverse().map((m,i)=>`<div class="review-item"><div><span class="chip red">${a(m.label)} · −${m.loss} cp</span><p>${a(m.title)}</p><p class="helper">${a(m.explanation)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">♞</div><h3>No game mistakes saved yet</h3><p>Import a PGN under Analyze games, run a Stockfish review, then save a missed position for practice.</p><button class="btn" data-page="analyze">Import a game →</button></div>`}`:
