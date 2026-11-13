@@ -19,8 +19,9 @@ function press(action,props={}) {callbacks.click({preventDefault(){},target:{clo
 function nav(page,id=null){t.nav(page,id);}
 function move(uci){const s=t.ui.board.history.at(-1),m=t.C.fromUci(s,uci);assert(m,'legal move '+uci);const from=m[0],to=m[1];for(const n of [from,to])callbacks.click({preventDefault(){},target:{closest(sel){return sel==='[data-sq]'?{dataset:{sq:String(n)}}:null;}}});}
 assert(app.innerHTML.includes('Chess Academy'));
+
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
-nav('lesson',1);assert.equal(t.ui.page,'lesson');
+nav('lesson',1);assert.equal(t.ui.page,'lesson');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
 press('board-next');assert.equal(t.ui.board.moves.length,1);press('board-back');assert.equal(t.ui.board.moves.length,0);
 press('board-next');assert.equal(t.ui.board.moves[0],'e2e4');
 nav('curriculum');assert(app.innerHTML.includes('Your curriculum'));
@@ -37,7 +38,8 @@ assert(t.data.mastered[1]);assert(t.ui.exam.passed);nav('curriculum');
 assert(app.innerHTML.includes('Mastered'));
 
 // Beginner training (preserves the 121 original course exercises).
-assert.equal(global.FOUNDATION_DRILLS.length,12);
+assert.equal(global.FOUNDATION_DRILLS.length,14);
+assert(global.FOUNDATION_DRILLS.filter(q=>q.kind==='board').length>=2);
 assert.equal(new Set(global.FOUNDATION_DRILLS.map(q=>q.id)).size,12);
 for(const q of global.FOUNDATION_DRILLS){
  assert.equal(q.options.length,4);
