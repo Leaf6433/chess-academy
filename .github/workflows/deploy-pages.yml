@@ -31,6 +31,8 @@ jobs:
         run: node tests/smoke.cjs
       - name: Test account lifecycle and cloud sync conflicts
         run: node tests/accounts.cjs
+      - name: Verify persistent account sync and conflict protection
+        run: node tests/account-resume.cjs
       - name: Verify Stockfish UCI integration
         run: node tests/uci-wrapper.cjs
       - name: Configure GitHub Pages
