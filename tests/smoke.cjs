@@ -22,6 +22,8 @@ assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
 nav('lesson',1);assert.equal(t.ui.page,'lesson');
+assert(app.innerHTML.includes('class="eval-rail"'),'Lesson reading has an evaluation rail');
+assert(app.innerHTML.includes('Stockfish analyzing'),'Loading indicator does not claim position is equal');
 assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'),'Lesson 1 introduces relevant vocabulary');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'),'Official Neo white king image must render');
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/bk.png'),'Official Neo black king image must render');
@@ -75,6 +77,7 @@ assert(app.innerHTML.includes('Today\'s focus'),'Cozy dashboard focus panel');
 assert(app.innerHTML.includes('Recent activity'),'Cozy dashboard activity panel');
 assert(app.innerHTML.includes('data-module="0"'),'Course card navigates to first module');
 nav('practice','foundation');
+assert(!app.innerHTML.includes('class="eval-rail"'),'Foundation practice does not reveal evaluation');
 assert.equal(t.ui.filter,'foundation');
 assert(app.innerHTML.includes('Practice skills that decide real games'));
 assert(app.innerHTML.includes('Game 1: White to move'));
@@ -93,7 +96,9 @@ assert(t.ui.page==='practice');
 
 // Verify opening recall branches for both colors.
 for(const [id,side] of [['italian',1],['caro',-1]]){
- nav('openings');press('select-opening',{opening:id});press('start-opening-drill');
+ nav('openings');assert(app.innerHTML.includes('class="eval-rail"'),'Opening study shows evaluation');
+ press('select-opening',{opening:id});press('start-opening-drill');
+ assert(!app.innerHTML.includes('class="eval-rail"'),'Opening recall drill hides evaluation');
  const b=t.ui.board;assert.equal(t.ui.openingPhase,'drill');assert.equal(t.ui.playSide,side);
  const seq=b.sequence.map(x=>x[0]);
  while(b.moves.length<seq.length){move(seq[b.moves.length]);}
@@ -105,6 +110,7 @@ press('exit-opening-drill');assert.equal(t.ui.board.kind,'opening');
 // PGN parser including variation and comments.
 const g=t.getGameMoves('[Event "Test"]\n1.e4 e5 2.Nf3 {notes} Nc6 (2... Nf6) 3.Bc4 Bc5 *');assert.equal(g.moves.length,6);assert.equal(g.tags.Event,'Test');
 nav('analyze');assert(app.innerHTML.includes('Import a PGN'));
+assert(!app.innerHTML.includes('class="eval-rail"'),'Game review displays no bar before PGN import');
 // Practice with shuffled answer order, selecting the true original answer.
 nav('practice');const q=t.D.exercises.find(x=>x.kind==='mc');press('open-question',{qid:q.id});assert.equal(t.ui.practiceOptionOrder.length,q.options.length);press('choose-question',{choice:String(q.answer)});assert.equal(t.ui.feedbackGood,true);
 nav('practice','due');assert.equal(t.ui.filter,'due');
