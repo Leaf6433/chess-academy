@@ -51,6 +51,7 @@ nav('practice','foundation');
 assert.equal(t.ui.filter,'foundation');
 assert(app.innerHTML.includes('Practice skills that decide real games'));
 assert(app.innerHTML.includes('Game 1: White to move'));
+const masteryBefore=JSON.stringify(t.data.mastered);
 press('open-question',{qid:'F01'});
 assert.equal(t.ui.practiceId,'F01');
 assert(app.innerHTML.includes('Game 1'));
@@ -59,7 +60,7 @@ assert.equal(t.ui.attemptWrong,1);
 press('choose-question',{choice:'0'});
 assert(t.data.practiceSolved.F01);
 assert(t.data.review.F01);
-assert(!t.data.mastered[1],'foundation practice is not course mastery');
+assert.equal(JSON.stringify(t.data.mastered),masteryBefore,'foundation practice is not course mastery');
 nav('practice','due');
 assert(t.ui.page==='practice');
 
