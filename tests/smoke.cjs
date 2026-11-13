@@ -21,7 +21,8 @@ function move(uci){const s=t.ui.board.history.at(-1),m=t.C.fromUci(s,uci);assert
 assert(app.innerHTML.includes('Chess Academy'));
 
 assert(t.D.lessons.length===40&&t.D.exercises.length===121);
-nav('lesson',1);assert.equal(t.ui.page,'lesson');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
+nav('lesson',1);assert.equal(t.ui.page,'lesson');
+assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'),'Lesson 1 introduces relevant vocabulary');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'),'Official Neo white king image must render');
 assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/bk.png'),'Official Neo black king image must render');
 assert(app.innerHTML.includes('neo-piece-image'),'All chess piece images use Neo renderer');
@@ -142,4 +143,19 @@ nav('curriculum');assert(app.innerHTML.includes('Placement credit · not studied
 nav('lesson',2);assert.equal(t.data.studied[2],undefined,'Opening a lesson alone must not mark it studied');
 press('lesson-phase',{phase:'practice'});assert(t.data.studied[2],'Entering practice marks study');
 
+// Chess vocabulary and placement diagnostics should teach, not rely on unexplained jargon.
+nav('lesson',15);
+assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'));
+assert(app.innerHTML.includes('Opposition'));
+assert(app.innerHTML.includes('with exactly one empty square between them'));
+nav('lesson',25);
+assert(app.innerHTML.includes('Tempo'));
+assert(app.innerHTML.includes('does not change the clock'));
+const kingQuestion=t.D.exercises.find(q=>q.id==='P18');
+const rookQuestion=t.D.exercises.find(q=>q.id==='P15');
+assert(kingQuestion.prompt.includes('pawn on h7'));
+assert(kingQuestion.explanation.includes('legal pawn move'));
+assert(rookQuestion.prompt.includes('rook move that checks'));
+assert(rookQuestion.explanation.includes('gaining time'));
+assert.equal(new Set(t.D.exercises.map(q=>q.id)).size,121);
 console.log('PASS: page navigation, mastery unlocking, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings');
