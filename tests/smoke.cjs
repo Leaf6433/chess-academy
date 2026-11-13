@@ -208,7 +208,10 @@ for(let id=1;id<=40;id++){
  assert(t.C.fromUci(t.C.parseFen(t.exFen(board)),board.answer),'Legal mastery move '+id);
  for(const q of quest){assert.equal(q.kind,'mc');assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
  // The user must be able to open the independent test, answer it and see a score.
- t.data.mastered[id-1] ||= {at:Date.now()};
+ for(const prereq of t.D.modules.flatMap(module=>module.ids)){
+  if(prereq===id)break;
+  t.data.mastered[prereq] ||= {at:Date.now()};
+ }
  nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
  assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
  press('start-mastery');
