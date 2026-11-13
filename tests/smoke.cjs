@@ -11,7 +11,7 @@ global.location={href:'http://localhost:8765/index.html'};
 global.navigator={};
 global.document={getElementById(id){return elements.get(id)||null;},addEventListener(name,fn){callbacks[name]=fn;}};
 global.scrollTo=()=>{};
-require('../chess-engine.js');require('../course-data-v2.js');
+require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
 require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
@@ -35,6 +35,34 @@ for(const q of t.ui.exam.items){
 }
 assert(t.data.mastered[1]);assert(t.ui.exam.passed);nav('curriculum');
 assert(app.innerHTML.includes('Mastered'));
+
+// Beginner training (preserves the 121 original course exercises).
+assert.equal(global.FOUNDATION_DRILLS.length,12);
+assert.equal(new Set(global.FOUNDATION_DRILLS.map(q=>q.id)).size,12);
+for(const q of global.FOUNDATION_DRILLS){
+ assert.equal(q.options.length,4);
+ assert(q.answer>=0&&q.answer<4);
+ t.C.parseFen(q.fen);
+ assert(t.D.lessons.some(l=>l.id===q.lesson),'foundation drill has matching lesson');
+}
+nav('dashboard');assert(app.innerHTML.includes('Foundation training'));
+assert(app.innerHTML.includes('Foundation-first track')||app.innerHTML.includes('Foundation & mastery track'));
+nav('practice','foundation');
+assert.equal(t.ui.filter,'foundation');
+assert(app.innerHTML.includes('Practice skills that decide real games'));
+assert(app.innerHTML.includes('Game 1: White to move'));
+press('open-question',{qid:'F01'});
+assert.equal(t.ui.practiceId,'F01');
+assert(app.innerHTML.includes('Game 1'));
+press('choose-question',{choice:'1'});
+assert.equal(t.ui.attemptWrong,1);
+press('choose-question',{choice:'0'});
+assert(t.data.practiceSolved.F01);
+assert(t.data.review.F01);
+assert(!t.data.mastered[1],'foundation practice is not course mastery');
+nav('practice','due');
+assert(t.ui.page==='practice');
+
 // Verify opening recall branches for both colors.
 for(const [id,side] of [['italian',1],['caro',-1]]){
  nav('openings');press('select-opening',{opening:id});press('start-opening-drill');
