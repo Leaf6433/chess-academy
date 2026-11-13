@@ -83,3 +83,14 @@ See `THIRD_PARTY_NOTICES.md` and `LICENSE-GPL-3.0.txt` for Stockfish licensing.
 
 ## Lite package note
 This ZIP intentionally excludes the 99 MB Full Stockfish engine. For full-mode engine analysis, use the separately provided **Full Stockfish** package instead. The Lite version includes all lessons and features, including analysis and game review; it only uses the smaller engine.
+
+## Troubleshooting: old website after GitHub Pages deployment
+
+If **Settings** still shows the old text “Cross-device sync can be added after hosting and account setup” without a **Chess Academy account** panel, the browser is loading an older cached version or the latest deployment did not succeed.
+
+1. In GitHub **Actions → Publish Chess Academy**, confirm the latest run is green. Failed tests prevent deployment.
+2. Reload the published page with `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (macOS).
+3. If still stale in Chrome: DevTools (F12) → Application → Service Workers → **Unregister**, then reload the page. The new service worker uses network-first HTML/JS/CSS, and will automatically re-register.
+4. **Do not click “Clear site data” or clear cookies/local storage.** Your original progress is stored in localStorage until cloud sync has been confirmed.
+5. If needed, export a progress JSON backup from Settings first.
+
