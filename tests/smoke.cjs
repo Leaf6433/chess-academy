@@ -49,6 +49,10 @@ press('board-next');assert.equal(t.ui.board.moves[0],'e2e4');
 nav('curriculum');assert(app.innerHTML.includes('Your curriculum'));
 nav('lesson',1);
 press('start-mastery');assert.equal(t.ui.exam.kind,'mastery');
+assert.equal(t.ui.phase,'mastery','Mastery tab activates');
+assert(app.innerHTML.includes('QUESTION 1 OF'),'Mastery questions must actually be visible in the page HTML');
+assert(app.innerHTML.includes(t.ui.exam.items[0].prompt),'Visible question must match the current assessment');
+assert(!app.innerHTML.includes('class="eval-rail"'),'No Stockfish evaluation during unassisted mastery');
 for(const q of t.ui.exam.items){
  assert.equal(t.ui.exam.items[t.ui.exam.index].id,q.id);
  if(q.kind==='mc')press('exam-choice',{choice:String(q.answer)});
@@ -56,6 +60,7 @@ for(const q of t.ui.exam.items){
  assert.equal(t.ui.exam.answered,true);
  press('exam-next');
 }
+assert(app.innerHTML.includes('MASTERY RESULTS'),'Mastery results must render, not only update state');
 assert(t.data.mastered[1]);assert(t.ui.exam.passed);nav('curriculum');
 assert(app.innerHTML.includes('Mastered'));
 
