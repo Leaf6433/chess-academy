@@ -13,7 +13,7 @@ global.document={getElementById(id){return elements.get(id)||null;},addEventList
 global.scrollTo=()=>{};
 require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../board-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
-require('../app.js');
+require('../puzzle-bank.js');require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
 function press(action,props={}) {callbacks.click({preventDefault(){},target:{closest(sel){if(sel==='[data-sq]')return null;return {dataset:{action,...props}};}}});}
 function nav(page,id=null){t.nav(page,id);}
@@ -284,6 +284,7 @@ for(let id=1;id<=40;id++){
  assert(!app.innerHTML.includes('class="eval-rail"'),'Mastery bar must stay hidden '+id);
  for(const q of t.ui.exam.items){
   if(q.kind==='mc')press('exam-choice',{choice:String(q.answer)});
+  else if(q.line){for(let i=0;i<q.line.length;i+=2){move(q.line[i]);if(t.ui.board.pending)press('promote',{uci:q.line[i]});}}
   else move(q.answer);
   assert.equal(t.ui.exam.answered,true,'Mastery answer recorded '+id);
   press('exam-next');
@@ -335,3 +336,40 @@ assert(local.indexOf('id="engine-response"')>local.indexOf('Analyze position'),'
 assert(local.indexOf('id="engine-response"')<local.indexOf('ENGINE OPPONENT'),'Play result is not appended below the whole screen');
 t.ui.engineResult=null;
 console.log('PASS: open-access lessons, board-first practice, independent mastery, exercise grading, 2 opening recall drills, PGN parsing, progress, review, settings, forty detailed lessons, forty independent mastery assessments');
+
+// Exercise every imported game through the same square and promotion events as the UI.
+for(const row of global.ACADEMY_PUZZLES){
+ const [last,...line]=row.moves.split(' ');
+ const start=t.C.after(row.before,[last]);
+ press('open-question',{qid:row.id});
+ assert.equal(t.C.toFen(t.ui.board.history[0]),t.C.toFen(start));
+ assert.equal(t.ui.board.flip,start.t===-1);
+ for(let i=0;i<line.length;i+=2){
+  assert.equal(t.ui.feedback,null);
+  move(line[i]);
+  if(t.ui.board.pending)press('promote',{uci:line[i]});
+  assert.deepEqual(t.ui.board.moves,line.slice(0,i+2));
+ }
+ assert(t.ui.feedbackGood,row.id);
+}
+nav('dashboard');
+press('start-daily');
+const daily=t.ui.practiceId;
+const dailyRow=global.ACADEMY_PUZZLES.find(row=>row.id===daily);
+const [, ...dailyLine]=dailyRow.moves.split(' ');
+const beforeDaily=t.ui.board.history[0];
+const wrong=t.C.legal(beforeDaily).find(m=>t.C.uci(m)!==dailyLine[0]&&!t.C.status([t.C.apply(beforeDaily,m)]).done);
+move(t.C.uci(wrong));
+if(t.ui.board.pending)press('promote',{uci:t.C.uci(wrong)});
+assert.equal(t.ui.board.moves.length,0);
+assert.equal(t.data.dailySolved[t.ui.dailyDay],undefined);
+for(let i=0;i<dailyLine.length;i+=2){
+ move(dailyLine[i]);if(t.ui.board.pending)press('promote',{uci:dailyLine[i]});
+}
+assert.equal(t.data.dailySolved[t.ui.dailyDay],daily);
+nav('dashboard');assert(app.innerHTML.includes('Completed today'));
+const RealDate=Date;
+global.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[RealDate.now()+86400000]));}};
+press('start-daily');assert.notEqual(t.ui.practiceId,daily);
+global.Date=RealDate;
+console.log('PASS: all rated positions, automatic replies, promotions, daily retry, completion and date rotation');

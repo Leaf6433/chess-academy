@@ -8,18 +8,51 @@ const $=id=>document.getElementById(id);
 const escapeHTML=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const a=x=>escapeHTML(x);
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...boardDrills.practice,...D.exercises],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts].map(e=>[e.id,e]));
+const puzzles=window.ACADEMY_PUZZLES.map(row=>{
+ const [last,...line]=row.moves.split(' ');
+ const before=C.parseFen(row.before),move=C.fromUci(before,last),state=C.apply(before,move);
+ const side=state.t===1?'White':'Black';
+ const lastMove=C.san(before,move);
+ return {...row,kind:'board',line,answer:line[0],fen:C.toFen(state),lastSquares:[move[0],move[1]],
+  prompt:side+' to move after '+lastMove+'. Find the strongest continuation.',
+  hint:'Look for checks, captures and threats. Calculate the reply before committing.',
+  get explanation(){return 'Solution: '+solutionLabels(state,line).join(' ');}};
+});
+function solutionLabels(state,line){
+ const labels=[];
+ for(const uci of line){
+  const move=C.fromUci(state,uci);
+  labels.push(C.san(state,move));
+  state=C.apply(state,move);
+ }
+ return labels;
+}
+const dailyPool=puzzles.filter(q=>q.group==='daily');
+function localDay(date=new Date()){
+ return Math.floor(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())/86400000);
+}
+function dailyCard(){
+ const day=localDay(),q=dailyPool[day%dailyPool.length],done=!!data.dailySolved[day];
+ return `<div class="study-onboarding"><div><strong>Daily challenge</strong><p>${Math.ceil(q.line.length/2)} moves to find · Puzzle rating ${q.rating} · ${done?'Completed today':'New each day'}</p></div><button class="btn secondary small" data-action="start-daily">${done?'Replay':'Play today’s puzzle'} →</button></div>`;
+}
+function questionBoard(q){
+ const b=makeBoard(exFen(q),[],'question');
+ b.flip=bs(b).t===-1;
+ b.last=q.lastSquares||null;
+ return b;
+}
+const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...boardDrills.practice,...D.exercises],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts,...puzzles].map(e=>[e.id,e]));
 function lessonExercises(l){
  const boards=l.exercises.filter(q=>q.kind==='board');
  const concept=l.exercises.find(q=>q.kind==='mc');
- return [...boardDrills.practice.filter(q=>q.lesson===l.id),...boards,...(concept?[concept]:[])];
+ return [...puzzles.filter(q=>q.group==='lesson'&&q.lesson===l.id),...boardDrills.practice.filter(q=>q.lesson===l.id),...boards,...(concept?[concept]:[])];
 }
-const starter=()=>({version:2,mastered:{},placementCredit:{},opened:{},studied:{},completed:{},attempts:{},review:{},practiceSolved:{},lastLesson:1,placement:null,starred:[],repertoire:[],openingDrills:{},games:[],journal:[],settings:{mode:'lite',depth:11,reviewLimit:40},created:Date.now()});
+const starter=()=>({version:2,mastered:{},placementCredit:{},opened:{},studied:{},completed:{},attempts:{},review:{},practiceSolved:{},dailySolved:{},lastLesson:1,placement:null,starred:[],repertoire:[],openingDrills:{},games:[],journal:[],settings:{mode:'lite',depth:11,reviewLimit:40},created:Date.now()});
 function load(){try{const raw=JSON.parse(localStorage.getItem(STORAGE));if(raw?.version===2)return {...starter(),...raw,opened:{...(raw.opened||raw.studied||{})},studied:raw.opened?raw.studied||{}:{},completed:raw.completed||{},settings:{...starter().settings,...raw.settings}};}catch(e){}const first=starter();try{const older=JSON.parse(localStorage.getItem('chess.academy.800-1200.progress.v1'));if(older){first.studied=Object.fromEntries((older.completed||[]).map(x=>[x,Date.now()]));first.lastLesson=Number(older.recent)||1;}}catch(e){}return first;}
 let data=load();
 const accounts=window.ChessAcademyAccounts||null;
 function loadAccountCopy(copy){if(!copy||copy.version!==2||!copy.mastered||!copy.review)throw Error('Invalid cloud progress.');data={...starter(),...copy,settings:{...starter().settings,...copy.settings}};save();ui.notice='Cloud progress loaded. Your browser now contains this copy.';render();}
-const ui={preview:null,page:'dashboard',id:1,phase:'read',lessonScene:0,board:null,exam:null,practiceId:null,notice:'',error:'',search:'',filter:'all',moduleOpen:0,menu:false,showHint:false,attemptWrong:0,feedback:null,feedbackGood:false,practiceOptionOrder:null,practiceOrigin:'practice',game:null,gamePly:0,engineState:null,engineResult:null,engineBusy:false,gameReviewBusy:false,gameReviewText:'',cancelReview:false,openingId:'italian',openingPhase:'explore',playSide:1,playing:false,pgnText:'',progressText:'',reflect:false,extraDetails:false};
+const ui={preview:null,page:'dashboard',id:1,phase:'read',lessonScene:0,board:null,exam:null,practiceId:null,notice:'',error:'',search:'',filter:'puzzles',moduleOpen:0,menu:false,showHint:false,attemptWrong:0,feedback:null,feedbackGood:false,practiceOptionOrder:null,practiceOrigin:'practice',game:null,gamePly:0,engineState:null,engineResult:null,engineBusy:false,gameReviewBusy:false,gameReviewText:'',cancelReview:false,openingId:'italian',openingPhase:'explore',playSide:1,playing:false,pgnText:'',progressText:'',reflect:false,extraDetails:false};
 const now=()=>Date.now();
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify(data));accounts?.changed();}catch(err){ui.notice='Browser storage is unavailable or full. Export your progress regularly.';}}
 function isMastered(id){return !!data.mastered[id]||!!data.placementCredit[id];}
@@ -102,13 +135,14 @@ function dashboard(){
    <p>Learn, practice, and improve at your own pace. Every great game begins with a good move.</p>
    <div class="study-quick-actions">
     <button class="study-cta primary" data-page="lesson" data-id="${id}"><span>▷</span> Continue course</button>
-    <button class="study-cta" data-page="practice" data-filter="foundation"><span>◎</span> Practice mode</button>
+    <button class="study-cta" data-page="practice" data-filter="puzzles"><span>◎</span> Practice mode</button>
     <button class="study-cta" data-page="play"><span>♞</span> Play vs. AI</button>
     <button class="study-cta" data-page="progress"><span>▥</span> View progress</button>
    </div>
   </div>
  </div>
  ${!data.placement?`<div class="study-onboarding"><div><strong>New here? Find your starting level.</strong><p>Take a short diagnostic, or begin Lesson 1. You can always revisit credited lessons.</p></div><button class="study-cta" data-action="start-placement">Take placement assessment →</button></div>`:''}
+ ${dailyCard()}
  <div class="study-layout">
  <section class="study-courses studio-card" aria-labelledby="study-courses-title">
   <div class="studio-section-heading"><div><span class="studio-heading-icon">▤</span><h2 id="study-courses-title">Your courses</h2><p>Structured lessons, guided practice, and mastery assessments.</p></div><button class="studio-text-link" data-page="curriculum">View all lessons ↗</button></div>
@@ -172,7 +206,7 @@ function boardInner(b,{viewOnly=false}={}){
 }
 function boardHTML(b,opts={}){
  if(!b)return '';
- const base=boardInner(b,opts);
+ const base=boardInner(b,opts)+(opts.viewOnly?'':promotionChoices(b));
  if(!evalAllowed(b)||opts.viewOnly)return base;
  const fen=C.toFen(bs(b)),saved=evaluationCache.get(fen),pct=saved?.percent??50;
  const label=saved?.label??'…';
@@ -231,11 +265,12 @@ function scheduleEvaluation(){
   }
  },280);
 }
+function promotionChoices(b){return b.pending?`<div class="feedback gold">Choose your promotion: ${b.pending.map(m=>`<button class="btn small" data-action="promote" data-uci="${C.uci(m)}">${{q:'Queen',r:'Rook',b:'Bishop',n:'Knight'}[m[2]]}</button>`).join(' ')}</div>`:'';}
 function boardControls(b,{engineAction=false}={}){if(!b)return '';
  const step=b.guided?b.sequence[b.moves.length]:null;
  const done=b.moves.length>=b.sequence.length;
  return `<div class="btn-row" style="margin-top:13px"><button class="btn ghost small" data-action="board-back" ${b.moves.length?'':'disabled'}>← Back</button><button class="btn secondary small" data-action="board-next" ${step?'':'disabled'}>Next move →</button><button class="btn ghost small" data-action="board-restart">Restart</button><button class="btn ghost small" data-action="board-flip">⇅ Flip</button></div>
- ${b.pending?`<div class="feedback gold">Choose your promotion: ${b.pending.map(m=>`<button class="btn small" data-action="promote" data-uci="${C.uci(m)}">${{q:'Queen',r:'Rook',b:'Bishop',n:'Knight'}[m[2]]}</button>`).join(' ')}</div>`:''}
+
  ${b.error?`<div class="feedback bad" role="status">${a(b.error)}</div>`:''}
  ${step?`<div class="feedback info"><strong>Next: ${a(C.label(bs(b),C.fromUci(bs(b),step[0])||C.legal(bs(b))[0]))}</strong><br>${a(step[1])}</div>`:b.kind==='lesson'||b.kind==='opening'?b.sequence.length?`<div class="feedback">Guided line complete. Explore legal continuations or restart to practice it again.</div>`:`<div class="feedback gold">No guided moves are available for this example. Choose a different walkthrough or explore the position.</div>`:''}
  ${b.moves.length?`<div class="move-list" aria-label="Replay moves">${b.labels.map((m,i)=>`<button class="move ${i===b.moves.length-1?'active':''}" data-action="board-jump" data-ply="${i+1}" title="Replay to this move">${a(m)}</button>`).join('')}</div>`:''}${engineAction?`<button class="btn ghost small" data-action="analyze-position">♞ Ask Stockfish about this position</button>`:''}`;
@@ -351,19 +386,20 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
  if(ui.phase==='practice'){
   const lqs=lessonExercises(l);
   const solved=lqs.filter(e=>!!data.practiceSolved[e.id]).length;
-  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Solve the concept checks. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">The mastery check uses three new interactive board positions and two concept questions. Pass at least four of five, including at least two board moves, without hints. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div></div>`,'Lesson');
+  return wrap(top+`<div class="cols-2"><div class="panel"><div class="panel-title"><h3>Practice this lesson</h3><span class="chip">${solved}/${lqs.length} completed</span></div><p class="panel-desc">Play the positions and answer the concept check. A wrong answer can be retried, with hints available. Your mastery check will be unassisted and mainly based on making the right decisions.</p><div class="grid-lines">${lqs.map((e,i)=>`<button class="lesson-row" data-action="open-question" data-qid="${a(e.id)}"><span class="number ${data.practiceSolved[e.id]?'complete':''}">${data.practiceSolved[e.id]?'✓':i+1}</span><span class="lesson-row-main"><strong>${a(e.prompt)}</strong><p>${e.line?'Puzzle rating '+e.rating+' · '+Math.ceil(e.line.length/2)+' moves':e.kind==='board'?'Choose a move on the board':'Choose an answer'} · ${data.practiceSolved[e.id]?'Practiced':'Not yet practiced'}</p></span><span class="right-detail">›</span></button>`).join('')}</div><div class="divider"></div>${lessonPracticeSummary(l)}<button class="btn secondary" data-action="start-mastery">Take mastery assessment →</button><p class="helper" style="margin-top:12px">The mastery check uses three new interactive board positions and two concept questions. Pass at least four of five, including at least two board moves, without hints. Failed skills return to practice and spaced review.</p></div><div class="panel"><h3>Lesson model position</h3><p class="panel-desc">Try the line again, or analyze this position with Stockfish.</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div></div>`,'Lesson');
  }
  return wrap(top,'Lesson');
 }
 function qCard(e,note=''){return `<div class="panel" style="margin-bottom:16px"><div class="eyebrow">${note||(e.kind==='board'?'BOARD PRACTICE':'CONCEPT PRACTICE')} · ${e.kind==='board'?'PLAY THE MOVE':'CHOOSE AN ANSWER'}</div><h2 style="font-size:21px;margin:9px 0 12px">${a(e.prompt)}</h2>${e.kind==='mc'?'':`<p class="helper">Click a piece, then its destination. Legal destinations are highlighted.</p>`}</div>`;}
-function openPractice(id,mode='practice'){const e=questions.get(id);if(!e)return;setupQuestionPreview(e);ui.practiceOrigin=ui.page==='lesson'&&ui.phase==='practice'?'lesson':(ui.page==='exercise'?ui.practiceOrigin:'practice');ui.practiceId=id;ui.phase='single';ui.exam=null;ui.page='exercise';ui.board=makeBoard(exFen(e),[],'question');ui.feedback=null;ui.feedbackGood=false;ui.showHint=false;ui.attemptWrong=0;ui.practiceOptionOrder=shuffle(e.options?.map((_,i)=>i)||[]);render();}
+function openPractice(id,mode='practice'){const e=questions.get(id);if(!e)return;setupQuestionPreview(e);ui.practiceOrigin=ui.page==='lesson'&&ui.phase==='practice'?'lesson':(ui.page==='exercise'?ui.practiceOrigin:'practice');ui.practiceId=id;ui.lastPuzzleMoveCorrect=false;ui.phase='single';ui.exam=null;ui.page='exercise';ui.dailyDay=mode==='daily'?localDay():null;ui.usedHint=false;ui.board=questionBoard(e);ui.feedback=null;ui.feedbackGood=false;ui.showHint=false;ui.attemptWrong=0;ui.practiceOptionOrder=shuffle(e.options?.map((_,i)=>i)||[]);render();}
 function nextRelevantQuestion(q){
  if(!q)return null;
  if(ui.practiceOrigin==='lesson'){
   const l=lessons.get(q.lesson),remaining=l?lessonExercises(l).filter(e=>!data.practiceSolved[e.id]&&e.id!==q.id):[];
   return remaining[0]||null;
  }
- const bank=ui.filter==='foundation'?foundation:practiceBank;
+ if(ui.dailyDay!=null)return null;
+ const bank=studioBank();
  return bank.find(e=>e.id!==q.id&&!data.practiceSolved[e.id])||null;
 }
 function lessonPracticeSummary(l){
@@ -384,9 +420,9 @@ function practiceQuestion(){const q=questions.get(ui.practiceId);if(!q)return pr
  const order=ui.practiceOptionOrder||q.options?.map((_,i)=>i)||[];
  let controls=q.kind==='mc'?`<div class="options">${order.map((orig,i)=>`<button class="puzzle-option ${ui.feedback&&orig===q.answer?'correct':''}" data-action="choose-question" data-choice="${orig}" ${ui.feedback?'disabled':''}><span class="letter">${String.fromCharCode(65+i)}</span>${a(q.options[orig])}</button>`).join('')}</div>`:boardHTML(ui.board);
  const next=nextRelevantQuestion(q);
- let follow=`<div class="btn-row" style="margin-top:14px">${!ui.feedback?`<button class="btn ghost small" data-action="hint">${ui.showHint?'Hide hint':'Show a hint'}</button>${ui.attemptWrong>=2?`<button class="btn ghost small" data-action="reveal-answer">Show explanation</button>`:''}`:`${next?`<button class="btn" data-action="open-question" data-qid="${a(next.id)}">Next practice position →</button>`:ui.practiceOrigin==='lesson'?`<button class="btn" data-action="start-mastery" data-id="${q.lesson}">Take mastery check →</button>`:`<button class="btn" data-page="practice" data-filter="${a(ui.filter)}">Back to practice →</button>`}`}<button class="btn ghost small" data-action="return-lesson-practice" data-id="${q.lesson}">Lesson practice overview</button></div>`;
- wrap(`${header('PRACTICE · '+l.title,'Apply the idea','Wrong answers are opportunities to learn. Try again, or reveal a short hint.')}
- <div class="layout-board"><div>${q.kind==='mc'?conceptOrBoard(q):controls}${q.kind==='board'&&ui.feedbackGood?`<div class="feedback">Your move has been played on the board.</div>`:''}</div><div>${qCard(q)}${q.kind==='mc'?controls:''}${ui.showHint&&!ui.feedback?`<div class="feedback gold">Hint: ${a(q.hint)}</div>`:''}${ui.attemptWrong&&!ui.feedback?`<div class="feedback bad">Not quite. Recheck the position and try another idea. ${ui.attemptWrong>=2?'You can reveal the answer now.':''}</div>`:''}${ui.feedback?`<div class="feedback ${ui.feedbackGood?'':'gold'}">${a(ui.feedback)}</div>`:''}${follow}</div></div>`,'Practice');
+ let follow=`<div class="btn-row" style="margin-top:14px">${!ui.feedback?`<button class="btn ghost small" data-action="hint">${ui.showHint?'Hide hint':'Show a hint'}</button>${ui.attemptWrong>=2&&ui.dailyDay==null?`<button class="btn ghost small" data-action="reveal-answer">Show explanation</button>`:''}`:`${next?`<button class="btn" data-action="open-question" data-qid="${a(next.id)}">Next practice position →</button>`:ui.practiceOrigin==='lesson'?`<button class="btn" data-action="start-mastery" data-id="${q.lesson}">Take mastery check →</button>`:`<button class="btn" data-page="practice" data-filter="${a(ui.filter)}">Back to practice →</button>`}`}<button class="btn ghost small" data-action="return-lesson-practice" data-id="${q.lesson}">Lesson practice overview</button></div>`;
+ wrap(`${header(ui.dailyDay!=null?'DAILY CHALLENGE':q.opening||'PRACTICE · '+l.title,q.variation||(q.line?'Calculate the continuation':'Apply the idea'),q.line?'Puzzle rating '+q.rating+' · '+Math.min(Math.floor(ui.board.moves.length/2)+1,Math.ceil(q.line.length/2))+' of '+Math.ceil(q.line.length/2)+' player moves':'Try a move, or ask for a hint.')}
+ <div class="layout-board"><div>${q.kind==='mc'?conceptOrBoard(q):controls}${q.kind==='board'&&ui.feedbackGood?`<div class="feedback">Your move has been played on the board.</div>`:''}</div><div>${qCard(q)}${q.line&&ui.board.moves.length&&!ui.feedback?`<div class="feedback info" role="status">Played ${a(ui.board.labels.join(' '))}. Your move.</div>`:''}${q.kind==='mc'?controls:''}${ui.showHint&&!ui.feedback?`<div class="feedback gold">Hint: ${a(q.hint)}</div>`:''}${ui.attemptWrong&&!ui.feedback&&!ui.lastPuzzleMoveCorrect?`<div class="feedback bad">Not quite. Recheck the position and try another idea. ${ui.attemptWrong>=2&&ui.dailyDay==null?'You can reveal the answer now.':''}</div>`:''}${ui.feedback?`<div class="feedback ${ui.feedbackGood?'':'gold'}">${a(ui.feedback)}</div>`:''}${follow}</div></div>`,'Practice');
 }
 
 function questionPreviewMoves(q){
@@ -446,11 +482,11 @@ function startAssessment(kind,id=null){
    ui.notice='This lesson’s independent mastery test is unavailable. Guided practice is still available.';
    return render();
   }
-  items=[applied[0],independent[0],applied[1],independent[1],applied[2]];
+  items=[applied[0],independent[0],applied[1],independent[1],puzzles.find(q=>q.group==='exam'&&q.lesson===l.id)];
  }
  ui.exam={kind,lessonId:id,items,index:0,results:[],answered:null,showReview:false};ui.page=kind==='placement'?'placement':'lesson';if(kind==='mastery')ui.phase='mastery';setupExamBoard();render();
 }
-function setupExamBoard(){const q=ui.exam?.items[ui.exam.index];if(q)setupQuestionPreview(q);else ui.preview=null;ui.board=q?makeBoard(exFen(q),[],'question'):null;if(ui.exam)ui.exam.optionOrder=shuffle(q?.options?.map((_,i)=>i)||[]);ui.feedback=null;ui.feedbackGood=false;}
+function setupExamBoard(){const q=ui.exam?.items[ui.exam.index];if(q)setupQuestionPreview(q);else ui.preview=null;ui.board=q?questionBoard(q):null;if(ui.exam)ui.exam.optionOrder=shuffle(q?.options?.map((_,i)=>i)||[]);ui.feedback=null;ui.feedbackGood=false;}
 function submitExam(good){const exam=ui.exam;if(!exam||exam.answered!==null)return;const q=exam.items[exam.index];exam.answered=good;exam.results.push({id:q.id,ok:good});if(!good)schedule(q.id,false);render();}
 function nextExam(){const x=ui.exam;if(!x||x.answered===null)return;x.index++;x.answered=null;if(x.index>=x.items.length){finishAssessment();return;}setupExamBoard();render();}
 function finishAssessment(){const ex=ui.exam;if(!ex)return;
@@ -494,22 +530,30 @@ function assessmentPage(pre=''){
 function placement(){if(ui.exam?.kind==='placement')return wrap(assessmentPage(),'Placement');const previous=data.placement;
  wrap(`${header('PERSONALIZED ENTRY','Placement assessment','An unassisted diagnostic helps locate your strengths. It is not an official chess rating.')}
  <div class="cols-2"><div class="panel"><div class="eyebrow">HOW IT WORKS</div><h2 style="margin:10px 0">Check your starting point</h2><p class="panel-desc">27 questions across tactical awareness, openings, middlegames, endgames and review habits. Most questions involve selecting an answer, with some moves played on the board. Take your time; no hints or penalties.</p><div class="checklist"><div class="check"><span class="checkmark">✓</span>Use the results to see weaker subject areas.</div><div class="check"><span class="checkmark">✓</span>Excellent foundational results can unlock limited placement credit.</div><div class="check"><span class="checkmark">✓</span>Every later lesson requires independent mastery.</div></div><div class="btn-row" style="margin-top:22px"><button class="btn" data-action="start-placement">${previous?'Retake assessment':'Begin assessment'} →</button><button class="btn ghost" data-page="curriculum">Browse curriculum</button></div></div><div class="panel"><h3>Previous result</h3>${previous?`<div class="value" style="font:800 42px var(--head);margin:13px 0">${previous.correct}/${previous.total}</div>${previous.domains.map(d=>renderBars(D.modules[d.module].name,d.correct,d.total)).join('')}`:'<p class="panel-desc">No assessment taken yet. You can still start at Lesson 1.</p>'}</div></div>`,'Placement');}
-function renderPracticeFilters(){return [['foundation',`★ Foundation (${foundation.length})`],['all','All skills'],['due',`Due reviews (${dueCount()})`],['tactics','Tactics'],['opening','Openings'],['endgame','Endgames'],['mistakes',`My game mistakes (${data.journal.length})`]].map(([id,label])=>`<button class="btn ${ui.filter===id?'active':'ghost'} small" data-action="practice-filter" data-filter="${id}">${label}</button>`).join('');}
+function renderPracticeFilters(){return [['puzzles','Puzzles'],['foundation',`★ Foundation (${foundation.length})`],['all','All skills'],['due',`Due reviews (${dueCount()})`],['tactics','Tactics'],['opening','Openings'],['endgame','Endgames'],['mistakes',`My game mistakes (${data.journal.length})`]].map(([id,label])=>`<button class="btn ${ui.filter===id?'active':'ghost'} small" data-action="practice-filter" data-filter="${id}">${label}</button>`).join('');}
+function studioBank(){
+ const moduleOf=q=>lessons.get(q.lesson).module;
+ const graded=puzzles.filter(q=>q.group==='lesson');
+ switch(ui.filter){
+ case 'puzzles':return graded;
+ case 'foundation':return [...graded.slice(0,5),...foundation];
+ case 'due':return Object.keys(data.review).filter(id=>data.review[id].due<=now()).map(id=>questions.get(id)).filter(Boolean);
+ case 'opening':return puzzles.filter(q=>q.group==='opening'&&q.opening===(ui.practiceOpening||'Italian Game'));
+ case 'tactics':return [...graded,...practiceBank].filter(q=>moduleOf(q)===1);
+ case 'endgame':return [...graded,...practiceBank].filter(q=>moduleOf(q)===5);
+ case 'mistakes':return [];
+ default:return [...graded,...practiceBank];
+ }
+}
 function practicePage(){
- const due=Object.keys(data.review).filter(id=>data.review[id].due<=now());
- const journalDue=ui.filter==='due'?data.journal.filter(m=>due.includes(m.id)):[];
- let bank=ui.filter==='foundation'?foundation.slice().sort((a,b)=>((data.practiceSolved[a.id]?1:0)-(data.practiceSolved[b.id]?1:0))||((data.review[a.id]?.streak||0)-(data.review[b.id]?.streak||0))||(a.priority-b.priority)):practiceBank;
- if(ui.filter==='due')bank=due.map(id=>questions.get(id)).filter(Boolean);
- if(ui.filter==='tactics')bank=bank.filter(e=>lessons.get(e.lesson).module===1);
- if(ui.filter==='opening')bank=bank.filter(e=>[2,3].includes(lessons.get(e.lesson).module));
- if(ui.filter==='endgame')bank=bank.filter(e=>lessons.get(e.lesson).module===5);
- if(ui.filter==='mistakes')bank=[];
- bank=bank.slice(0,ui.filter==='all'?70:90);
+ const bank=studioBank();
+ const journalDue=ui.filter==='due'?data.journal.filter(m=>data.review[m.id]?.due<=now()):[];
  wrap(`${header('PRACTICE STUDIO','Train what matters','Choose specific skills or work through reviews scheduled from your mistakes. Most activities are interactive board positions.')}
  ${ui.filter==='foundation'?`<div class="panel" style="margin-bottom:14px"><span class="chip gold">BEGINNER TRAINING · ${foundation.filter(e=>data.practiceSolved[e.id]).length}/${foundation.length} PRACTICED</span><h2 style="margin:12px 0 7px">Practice skills that decide real games</h2><p class="panel-desc">Short, visually grounded questions about hanging queens, blunder checks, king safety, and passed pawns. Some positions are reconstructed from actual anonymized game records. These drills reinforce the 40-lesson course; they do not count as unassisted lesson mastery.</p><div class="btn-row"><button class="btn ghost small" data-page="lesson" data-id="1">Review blunder-prevention lesson</button><button class="btn ghost small" data-page="analyze">Analyze a PGN →</button></div></div>`:''}
- <div class="toolbar">${renderPracticeFilters()}</div>
+ ${dailyCard()}<div class="toolbar">${renderPracticeFilters()}</div>
+ ${ui.filter==='opening'?`<div class="panel"><label for="opening-practice">Practice an opening</label> <select id="opening-practice">${[...new Set(puzzles.filter(q=>q.opening).map(q=>q.opening))].map(label=>`<option ${label===(ui.practiceOpening||'Italian Game')?'selected':''}>${a(label)}</option>`).join('')}</select><p class="helper">Each position starts after your opponent’s last move in a real game.</p></div>`:''}
  ${ui.filter==='mistakes'?`${data.journal.length?`<div class="grid-lines">${data.journal.slice().reverse().map((m,i)=>`<div class="review-item"><div><span class="chip red">${a(m.label)} · −${m.loss} cp</span><p>${a(m.title)}</p><p class="helper">${a(m.explanation)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">♞</div><h3>No game mistakes saved yet</h3><p>Import a PGN under Analyze games, run a Stockfish review, then save a missed position for practice.</p><button class="btn" data-page="analyze">Import a game →</button></div>`}`:
- (bank.length||journalDue.length)?`<div class="grid-lines">${journalDue.map(m=>`<div class="review-item"><div><span class="chip gold">GAME REVIEW · ${a(m.label)}</span><p>${a(m.title)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}${bank.map(e=>`<div class="review-item"><div style="min-width:0"><span class="chip ${data.practiceSolved[e.id]?'':'grey'}">${e.kind==='board'?'BOARD MOVE':'CONCEPT'} · ${a(e.id)}</span><p style="margin-top:8px;font-weight:700">${a(e.prompt)}</p><p class="helper">${a(lessons.get(e.lesson).title)} ${data.practiceSolved[e.id]?'· Practiced':''}</p></div><button class="btn secondary small" data-action="open-question" data-qid="${a(e.id)}">Practice →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">✓</div><h3>Nothing due right now</h3><p>Continue your course or choose another practice category. Reviews automatically come back after one, three, seven and more days.</p><button class="btn" data-page="curriculum">Browse lessons</button></div>`}
+ (bank.length||journalDue.length)?`<div class="grid-lines">${journalDue.map(m=>`<div class="review-item"><div><span class="chip gold">GAME REVIEW · ${a(m.label)}</span><p>${a(m.title)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}${bank.map(e=>`<div class="review-item"><div style="min-width:0"><span class="chip ${data.practiceSolved[e.id]?'':'grey'}">${e.kind==='board'?'BOARD MOVE':'CONCEPT'} · ${a(e.id)}</span><p style="margin-top:8px;font-weight:700">${a(e.variation||e.prompt)}</p><p class="helper">${e.line?a((e.opening||lessons.get(e.lesson).title)+" · Puzzle rating "+e.rating+" · "+Math.ceil(e.line.length/2)+" moves"):a(lessons.get(e.lesson).title)} ${data.practiceSolved[e.id]?'· Practiced':''}</p></div><button class="btn secondary small" data-action="open-question" data-qid="${a(e.id)}">Practice →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">✓</div><h3>Nothing due right now</h3><p>Continue your course or choose another practice category. Reviews automatically come back after one, three, seven and more days.</p><button class="btn" data-page="curriculum">Browse lessons</button></div>`}
  `,'Practice');
 }
 function sourcePage(){wrap(`${header('CITABLE CHESS THEORY','Know where the material comes from','Opening moves and teaching methods are grounded in established resources. Explanations and exercises in Chess Academy are original; references do not imply endorsement.')}
@@ -683,7 +727,7 @@ function settingsPage(){const st=engine.getStatus();wrap(`${header('APP SETTINGS
  <div class="cols-2"><div class="panel"><h3>Stockfish configuration</h3><p class="panel-desc">The supplied Stockfish 19 Lite engine works on ordinary modern browsers. Full multithreaded Stockfish requires a secure cross-origin-isolated site with the correct headers.</p><div class="grid-lines"><div><label for="engine-mode" class="helper">Engine profile</label><select id="engine-mode" class="select" style="width:100%;margin-top:6px"><option value="lite" ${data.settings.mode==='lite'?'selected':''}>Lite, single-threaded · fast and portable</option><option value="full" ${data.settings.mode==='full'?'selected':''} ${st.canFull?'':'disabled'}>Full, multithreaded · advanced analysis ${st.canFull?'':'(hosting headers required)'}</option></select></div><div><label for="engine-depth" class="helper">Position analysis depth</label><select id="engine-depth" class="select" style="width:100%;margin-top:6px">${[6,9,11,14,18].map(d=>`<option value="${d}" ${data.settings.depth===d?'selected':''}>Depth ${d}${d>=14?' · slower':''}</option>`).join('')}</select></div><button class="btn secondary" data-action="engine-test">Test Stockfish engine</button><div class="mini-panel"><span class="status-dot ${st.ready?'ready':''}"></span> ${a(st.ready?`Running ${st.mode}`:st.loading?'Loading…':'Not running')}<p class="helper">${a(st.error||'Stockfish starts when requested. It runs on this device, not a remote analysis server.')}</p></div></div></div>
  <div class="panel"><h3>Progress storage and backup</h3><p class="panel-desc">Your lessons, practice results, repertoires and game journal are always saved locally. If you sign in and choose a progress copy above, they can also sync securely to your account. Exporting a backup is still recommended.</p><div class="btn-row"><button class="btn" data-action="export">↓ Export progress .json</button><button class="btn secondary" data-action="progress-file">↑ Import backup</button></div><div class="divider"></div><h3>Installation</h3><p class="panel-desc">Use the included <span class="inline-code">start-server.bat</span> (Windows) or <span class="inline-code">python server.py</span>. This enables browser engine workers. Directly opening the HTML as a <span class="inline-code">file://</span> page may block WebAssembly and storage features.</p><p class="helper">PWA install depends on your browser and a secure hosting context. Your course remains free.</p></div></div><div class="panel"><h3>Privacy and limitations</h3><p class="panel-desc">Accounts and cloud storage use Supabase when enabled. Your account password is handled by Supabase Auth, not stored inside your chess progress. Games are imported manually (Chess.com game fetching is not automatic). Stockfish supplies engine evaluations; coaching explanations are authored or rules-based, not generated by an AI chat coach.</p></div>`,'Settings');}
 function render(){switch(ui.page){case'dashboard':dashboard();break;case'curriculum':curriculum();break;case'lesson':lessonPage();break;case'exercise':practiceQuestion();break;case'placement':placement();break;case'practice':practicePage();break;case'openings':openingPage();break;case'analyze':renderAnalysis();break;case'journal':journalPage();break;case'play':playPage();break;case'progress':progressPage();break;case'sources':sourcePage();break;case'settings':settingsPage();break;default:dashboard();}scheduleEvaluation();}
-function nav(page,arg=null){if(page==='lesson')return initLesson(Number(arg||nextLesson()));ui.page=page;ui.menu=false;ui.notice='';ui.engineResult=null;if(page==='placement'&&ui.exam?.kind!=='placement')ui.exam=null;
+function nav(page,arg=null){if(page!=='lesson'&&page!=='placement')ui.exam=null;if(page==='lesson')return initLesson(Number(arg||nextLesson()));ui.page=page;ui.menu=false;ui.notice='';ui.engineResult=null;if(page==='placement'&&ui.exam?.kind!=='placement')ui.exam=null;
  if(page==='curriculum'&&arg!=null)ui.moduleOpen=Number(arg);
  if(page==='practice'&&arg!=null)ui.filter=arg;
  if(page==='analyze'&&!ui.board)initGame();
@@ -692,8 +736,9 @@ function nav(page,arg=null){if(page==='lesson')return initLesson(Number(arg||nex
  render();if(page==='curriculum'&&arg!=null){const dest=document.getElementById?.('module-'+ui.moduleOpen);if(dest?.scrollIntoView)dest.scrollIntoView({block:'start',behavior:'smooth'});else window.scrollTo?.({top:0,behavior:'instant'});}else window.scrollTo?.({top:0,behavior:'instant'});
 }
 function chooseSquare(i){const b=ui.board;if(!b)return;if(b.kind==='opening-drill'&&b.moves.length===b.sequence.length)return;const s=bs(b),legal=C.legal(s);
- if((ui.exam&&!ui.exam.showReview&&ui.exam.answered!==null)||ui.playing)return;
+ if((b.kind==='question'&&((ui.page==='lesson'||ui.page==='placement')&&ui.exam?.answered!=null||ui.page==='exercise'&&ui.feedback))||ui.playing)return;
  if(b.kind==='play'&&s.t!==1)return;
+ b.pending=null;
  const side=C.side(s.b[i]);if(side===s.t){b.selected=b.selected===i?-1:i;b.error='';return render();}
  const choices=legal.filter(m=>m[0]===b.selected&&m[1]===i);
  if(choices.length===1)return handleMove(choices[0]);
@@ -701,6 +746,25 @@ function chooseSquare(i){const b=ui.board;if(!b)return;if(b.kind==='opening-dril
  b.error='Select a piece and then a highlighted legal square.';render();
 }
 function applyBoardMove(b,m,rerender=true){const s=bs(b);const san=C.label(s,m);b.history.push(C.apply(s,m));b.moves.push(C.uci(m));b.labels.push(san);b.last=[m[0],m[1]];b.selected=-1;b.pending=null;b.error='';b.guided=b.sequence.every((x,i)=>!b.moves[i]||b.moves[i]===x[0]);if(rerender)render();}
+function playPuzzleMove(q,m,exam){
+ const b=ui.board,expected=q.line[b.moves.length],next=C.apply(bs(b),m);
+ const mate=C.checked(next)&&!C.legal(next).length;
+ b.selected=-1;b.pending=null;
+ if(C.uci(m)!==expected&&!mate){
+  ui.lastPuzzleMoveCorrect=false;
+  if(exam)return submitExam(false);
+  return solvePractice(false,q.explanation);
+ }
+ applyBoardMove(b,m,false);
+ if(mate||b.moves.length===q.line.length){
+  if(exam)return submitExam(true);
+  if(ui.dailyDay!=null)data.dailySolved[ui.dailyDay]=q.id;
+  return solvePractice(true,mate?'Checkmate. '+b.labels.join(' '):q.explanation,ui.usedHint||ui.attemptWrong>0);
+ }
+ ui.lastPuzzleMoveCorrect=true;
+ const reply=C.fromUci(bs(b),q.line[b.moves.length]);
+ applyBoardMove(b,reply);
+}
 function handleMove(m){const b=ui.board;if(!b)return;
  if(ui.page==='openings'&&b.kind==='opening-drill')return openingDrillMove(m);
  if(ui.page==='journal'){
@@ -711,11 +775,13 @@ function handleMove(m){const b=ui.board;if(!b)return;
  }
  if(ui.exam&&((ui.page==='placement'&&ui.exam.kind==='placement')||(ui.page==='lesson'&&ui.phase==='mastery'&&ui.exam.kind==='mastery'))){
   const q=ui.exam.items[ui.exam.index];if(!q||q.kind!=='board')return;
+  if(q.line)return playPuzzleMove(q,m,true);
   const good=C.uci(m)===q.answer;if(good)applyBoardMove(b,m,false);submitExam(good);return;
  }
  if(ui.page==='exercise'){
   const q=questions.get(ui.practiceId);if(q?.kind!=='board'||ui.feedback)return;
-  if(C.uci(m)===q.answer){applyBoardMove(b,m,false);solvePractice(true,q.explanation,ui.showHint||ui.attemptWrong>0);}else solvePractice(false,q.explanation);return;
+  if(q.line)return playPuzzleMove(q,m,false);
+  if(C.uci(m)===q.answer){applyBoardMove(b,m,false);solvePractice(true,q.explanation,ui.usedHint||ui.attemptWrong>0);}else solvePractice(false,q.explanation);return;
  }
  if(ui.page==='play'){applyBoardMove(b,m,false);render();computerReply();return;}
  if(ui.page==='analyze'){applyBoardMove(b,m);return;}
@@ -726,7 +792,7 @@ function navigateBoardNext(){const b=ui.board;if(!b||b.kind==='question'||!b.gui
 function restartBoard(){const b=ui.board;if(!b)return;ui.board=makeBoard(b.initial,b.sequence,b.kind);ui.board.flip=b.flip;ui.board.opening=b.opening;ui.engineResult=null;render();}
 function shuffle(items){const out=[...items];for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;}
 function boardOrMCchoice(answer){const e=ui.exam;if(!e||e.answered!==null)return;const q=e.items[e.index];if(q.kind!=='mc')return;submitExam(answer===q.answer);}
-function chooseMC(answer){const q=questions.get(ui.practiceId);if(!q||ui.feedback||q.kind!=='mc')return;solvePractice(Number(answer)===q.answer,q.explanation,ui.showHint||ui.attemptWrong>0);}
+function chooseMC(answer){const q=questions.get(ui.practiceId);if(!q||ui.feedback||q.kind!=='mc')return;solvePractice(Number(answer)===q.answer,q.explanation,ui.usedHint||ui.attemptWrong>0);}
 function exportProgress(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='Chess-Academy-progress-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function escapePGNTag(s){return String(s||'').replace(/["\\]/g,'');}
 function gamePgnFromBoard(b){let result='[Event "Chess Academy practice"]\n[White "Student"]\n[Black "Stockfish Lite"]\n\n';for(let i=0;i<b.labels.length;i++)result+=(i%2===0?Math.floor(i/2)+1+'. ':'')+b.labels[i].replace(/^\d+(?:\.\.\.|\.)\s*/,'')+' ';return result+'*';}
@@ -739,9 +805,10 @@ function action(name,el){switch(name){
  case'lesson-phase':ui.lessonScene=0;ui.phase=el.dataset.phase;if(ui.phase==='practice'){data.studied[ui.id]=data.studied[ui.id]||now();save();}ui.board=makeBoard(lessons.get(ui.id).fen,lessons.get(ui.id).line,'lesson');return render();
  case'start-mastery':return startAssessment('mastery',Number(el.dataset.id||ui.id));
  case'exam-choice':return boardOrMCchoice(Number(el.dataset.choice));case'exam-next':return nextExam();
+ case'start-daily':return openPractice(dailyPool[localDay()%dailyPool.length].id,'daily');
  case'open-question':return openPractice(el.dataset.qid);
  case'choose-question':return chooseMC(Number(el.dataset.choice));
- case'hint':ui.showHint=!ui.showHint;return render();
+ case'hint':ui.showHint=!ui.showHint;ui.usedHint=true;return render();
  case'reveal-answer':{const e=questions.get(ui.practiceId);if(!e)return;return solvePractice(true,e.explanation,true);}
  case'open-next-question':{const q=questions.get(ui.practiceId),next=nextRelevantQuestion(q);return next?openPractice(next.id):nav('practice',ui.filter);}
  case'return-lesson-practice':return initLesson(Number(el.dataset.id||questions.get(ui.practiceId)?.lesson),'practice');
@@ -802,6 +869,7 @@ document.addEventListener('error',event=>{
 document.addEventListener('change',e=>{
  if(e.target.id==='import-pgn'){loadPGNfile(e.target.files?.[0]);e.target.value='';}
  if(e.target.id==='import-progress'){loadBackup(e.target.files?.[0]);e.target.value='';}
+ if(e.target.id==='opening-practice'){ui.practiceOpening=e.target.value;render();}
  if(e.target.id==='engine-mode'){data.settings.mode=e.target.value;engine.stop();save();render();}
  if(e.target.id==='engine-depth'){data.settings.depth=Number(e.target.value);save();render();}
  if(e.target.id==='difficulty'){ui.playDepth=Number(e.target.value);}
