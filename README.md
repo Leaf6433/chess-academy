@@ -9,6 +9,12 @@ With the site owner's confirmation of permission to use the Chess.com Neo artwor
 - The chess rules, board layout, accounts, and existing browser progress data are unchanged.
 - Test that `wk.png` and `bk.png` appear correctly in a browser after the latest GitHub Pages deployment. Headless DOM tests verify URL wiring, but cannot guarantee third-party CDN accessibility in each browser.
 
+## Lesson-board audit — November 13, 2026
+
+Repaired **22 missing core lesson walkthroughs** (Lessons 3, 15, 17–26, and 31–40). Twenty previously combined a standard starting board with an empty move list; two had custom positions but no demonstration moves. Lesson 3 now demonstrates a *relative pin* with a legal but costly knight move, a bishop capture of the queen, and a recapture. All replacements have topic-specific setup positions, at least one legal move, a move-by-move explanation, and contextual teaching notes. Six older examples also gained missing walkthrough explanations, and an inaccurate Caro-Kann note was corrected.
+
+The website now distinguishes genuinely completed lines from examples with no guided moves rather than displaying “Guided line complete” immediately. Automated tests check the **core and alternate example in every one of the 40 lessons**, verify that both can play their first move and restart, check that the two positions differ, and continue covering separate board-based practice and mastery. A separate legality audit covered all 40 core examples, 40 alternate demonstrations, 121 original exercises, 14 foundation exercises, 160 added board drills, and 40 mastery move challenges.
+
 ## Full-length lessons and independent mastery — November 13, 2026
 
 All **40 lessons** now feature three expanded theory sections (120 new teaching sections), three reflective practice prompts with revealable answers, a lesson-specific common mistake, two interactive board demonstrations (the original model and a distinct new position), and an estimated **25-minute suggested study route**: 5 minutes for the core explanation, 9 for deeper instruction, 6 for the boards and 5 for recall/guided practice. This is a **suggested pace**, not a timer or a guarantee of exact reading duration.
