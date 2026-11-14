@@ -134,7 +134,7 @@ function dashboard(){
   <div class="study-hero-copy"><div class="studio-eyebrow">YOUR CHESS JOURNEY</div>
    <h1>Welcome to your<br><span>Chess Academy.</span></h1>
    <p>Learn, practice, and improve at your own pace. Every great game begins with a good move.</p>
-   <div class="study-quick-actions">${workButton('model','italian','Learn my first opening')}
+   <div class="study-quick-actions">
     <button class="study-cta primary" data-page="lesson" data-id="${id}"><span>▷</span> Continue course</button>
     <button class="study-cta" data-page="practice" data-filter="puzzles"><span>◎</span> Practice mode</button>
     <button class="study-cta" data-page="play"><span>♞</span> Play vs. AI</button>
@@ -753,7 +753,7 @@ function openingPage(){
  const b=ui.board,selected=data.repertoire.includes(op.id);
  const commentary=b.moves.length?`<div class="feedback info" aria-live="polite">${studyRound(b)}</div>`:'';
  wrap(`${header('OPENING LABORATORY','Learn an opening','Study a line, see how a different reply changes the plan, then play your side from memory.')}
- <div class="panel"><p>New to openings? Learn the Italian Game from the starting board, one move at a time.</p>${workButton('model','italian','Learn my first opening')}<div class="divider"></div><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
+ <div class="panel"><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
  ${studySidePicker(ui.openingColor||op.side)}<div class="btn-row" style="margin-top:12px">${['Model line',study.title].map((name,i)=>`<button class="btn small ${i===Number(!!ui.openingBranch)?'active':'ghost'}" data-action="opening-chapter" data-branch="${i}">${a(name)}</button>`).join('')}</div></div>
  <div class="layout-board"><div><div class="eyebrow">${drill?'RECALL TRAINING':'MODEL LINE'} · ${a(chapter.title)}</div><div style="margin-top:12px">${boardHTML(b)}${drill?openingDrillControls(op):commentary+boardControls(b,{engineAction:true})+engineResponse()}</div></div>
  <div class="panel"><div class="eyebrow">STRATEGY · PLAY AS ${a((ui.openingColor||op.side).toUpperCase())}</div><h2>${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p>

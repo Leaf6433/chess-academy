@@ -1,7 +1,7 @@
 // Authored teaching sequences. The Italian example is illustrative; the Opera Game is historical.
 window.BOARD_WORKSHOPS = {
  italian: {
-  title:'Your first Italian Game',lessons:[5,7,8,9,25,26],
+  title:'Italian Game: preparing d4',lessons:[5,7,8,9,25,26],
   moves:'e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3 g8f6 d2d3 d7d6 e1g1 e8g8 f1e1 a7a6 c4b3 c5a7 d3d4 e5d4 c3d4',
   stops:{
    0:['Move your king’s pawn two squares, from e2 to e4. Click the pawn, then its destination.','The pawn occupies the center and opens a path for your bishop. The notation e4 names its destination.'],
