@@ -571,31 +571,51 @@ function openingLines(){return [
  {id:'qgd',name:'Queen’s Gambit Declined',side:'Black',intro:'Reinforce d5 with ...e6 and develop solidly.',type:'vs 1.d4',line:['d2d4','d7d5','c2c4','e7e6','b1c3','g8f6','c1g5','f8e7'],ideas:['Support d5','Develop and castle','Prepare a timely ...c5 break'],ref:'S07'},
  {id:'slav',name:'Slav Defense',side:'Black',intro:'Support the center with ...c6 while retaining bishop options.',type:'vs 1.d4',line:['d2d4','d7d5','c2c4','c7c6','g1f3','g8f6'],ideas:['Use ...c6 to reinforce d5','Retain light-bishop flexibility','Know when ...dxc4 is playable'],ref:'S07'}
  ];}
-function openingPage(){const lines=openingLines();const op=lines.find(o=>o.id===ui.openingId)||lines[0];const selected=data.repertoire.includes(op.id);
- const chooser=`<div class="repertoire-grid">${lines.map(o=>`<div class="repertoire-card"><div class="btn-row"><span class="chip ${o.side==='Black'?'gold':''}">${o.side}</span><span class="chip grey">${a(o.type)}</span></div><strong>${a(o.name)}</strong><p>${a(o.intro)}</p><div class="btn-row"><button class="btn ${ui.openingId===o.id?'active':'secondary'} small" data-action="select-opening" data-opening="${o.id}">${ui.openingId===o.id?'Selected':'Explore line'}</button><button class="btn ghost small" data-action="toggle-repertoire" data-opening="${o.id}">${data.repertoire.includes(o.id)?'★ Saved':'☆ Shortlist'}</button></div></div>`).join('')}</div>`;
- const t=op.line.map(u=>[u,`A model move in the ${op.name}. Compare the resulting activity, center, and threats.`]);
- if(!ui.board||!['opening','opening-drill'].includes(ui.board.kind)||ui.board.opening!==op.id){ui.board=makeBoard(C.START_FEN,t,'opening');ui.board.opening=op.id;ui.openingPhase='explore';}
- wrap(`${header('OPENING LABORATORY','Explore before you commit','Compare sound opening choices, study the ideas behind the moves, then shortlist the systems you enjoy.')}
- <div class="panel"><div class="panel-title"><h3>Opening choices</h3><span class="chip">${data.repertoire.length} shortlisted</span></div>${chooser}</div>
- <div class="layout-board"><div><div class="eyebrow">${ui.openingPhase==='drill'?'RECALL TRAINING':'MODEL LINE'} · ${a(op.name)}</div><div style="margin-top:12px">${boardHTML(ui.board)}${ui.openingPhase==='drill'?openingDrillControls(op):boardControls(ui.board,{engineAction:true})}${ui.openingPhase==='drill'?'':engineResponse()}</div></div><div class="panel"><div class="eyebrow">STRATEGY</div><h2 style="margin:8px 0">${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p><h3>Typical ideas</h3><div class="checklist" style="margin:15px 0">${op.ideas.map(t=>`<div class="check"><span class="checkmark">✓</span>${a(t)}</div>`).join('')}</div><button class="btn" data-action="toggle-repertoire" data-opening="${op.id}">${selected?'Remove from shortlist':'Add to my shortlist ☆'}</button><div class="divider"></div><h3>Try it</h3><p class="panel-desc">Step through the standard model line with Next or move the pieces yourself. Deviation turns the board into free play. Use Stockfish for alternatives, but remember engines do not teach strategy by themselves.</p><div class="btn-row"><button class="btn" data-action="start-opening-drill">${ui.openingPhase==='drill'?'Restart recall drill':'Practice from memory →'}</button><button class="btn secondary" data-action="exit-opening-drill">${ui.openingPhase==='drill'?'Back to explanation':'Restart model line'}</button></div><p class="helper" style="margin-top:12px">Reference: ${a(D.sources.find(s=>s.id===op.ref)?.title||'Established opening principles')}</p></div></div>`,'Opening laboratory');
+function openingChapter(op){
+ const study=window.OPENING_STUDIES[op.id];
+ if(ui.openingBranch){
+  const state=C.after(C.START_FEN,op.line.slice(0,study.fork));
+  return {key:op.id+'-branch',title:study.title,fen:C.toFen(state),sequence:study.moves.map((move,i)=>[move,study.branch[i]])};
+ }
+ return {key:op.id,title:'Model line',fen:C.START_FEN,sequence:op.line.map((move,i)=>[move,study.notes[i]])};
+}
+function openingPage(){
+ const lines=openingLines(),op=lines.find(o=>o.id===ui.openingId)||lines[0];
+ const study=window.OPENING_STUDIES[op.id],chapter=openingChapter(op),drill=ui.openingPhase==='drill';
+ if(!ui.board||ui.board.opening!==chapter.key){
+  ui.board=makeBoard(chapter.fen,chapter.sequence,'opening');
+  ui.board.opening=chapter.key;ui.board.flip=op.side==='Black';
+ }
+ const b=ui.board,selected=data.repertoire.includes(op.id);
+ const last=b.guided&&b.moves.length<=b.sequence.length&&b.moves.length?b.sequence[b.moves.length-1]:null;
+ const commentary=last?`<div class="feedback info" aria-live="polite"><strong>${a(b.labels.at(-1))}</strong> · ${a(last[1])}</div>`:'';
+ wrap(`${header('OPENING LABORATORY','Learn an opening','Study a line, see how a different reply changes the plan, then play your side from memory.')}
+ <div class="panel"><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
+ <div class="btn-row" style="margin-top:12px">${['Model line',study.title].map((name,i)=>`<button class="btn small ${i===Number(!!ui.openingBranch)?'active':'ghost'}" data-action="opening-chapter" data-branch="${i}">${a(name)}</button>`).join('')}</div></div>
+ <div class="layout-board"><div><div class="eyebrow">${drill?'RECALL TRAINING':'MODEL LINE'} · ${a(chapter.title)}</div><div style="margin-top:12px">${boardHTML(b)}${drill?openingDrillControls(op):commentary+boardControls(b,{engineAction:true})+engineResponse()}</div></div>
+ <div class="panel"><div class="eyebrow">STRATEGY · PLAY AS ${a(op.side.toUpperCase())}</div><h2>${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p>
+ ${drill?'':`<h3>${ui.openingBranch?'What changes?':'What to look for'}</h3><p class="panel-desc">${a(ui.openingBranch?study.branch[0]:op.ideas.join('. ')+'.')}</p>
+ <div class="btn-row"><button class="btn" data-action="start-opening-drill">Practice from memory →</button>${!ui.openingBranch?`<button class="btn secondary" data-action="opening-chapter" data-branch="1">Study ${a(study.title)} →</button>`:''}</div>`}
+ <div class="divider"></div><button class="btn ghost small" data-action="toggle-repertoire" data-opening="${op.id}">${selected?'★ Shortlisted · remove':'☆ Add to my shortlist'}</button>
+ <p class="helper">Reference: ${a(D.sources.find(s=>s.id===op.ref)?.title||'Established opening principles')}</p></div></div>`,'Opening laboratory');
 }
 function startOpeningDrill(){
- const op=openingLines().find(o=>o.id===ui.openingId);if(!op)return;
+ const op=openingLines().find(o=>o.id===ui.openingId),chapter=openingChapter(op);
  ui.openingPhase='drill';ui.playSide=op.side==='Black'?-1:1;ui.openingDrillMistakes=0;
- const sequence=op.line.map(u=>[u,'']);const b=makeBoard(C.START_FEN,sequence,'opening-drill');b.opening=op.id;b.flip=ui.playSide===-1;ui.board=b;
- // Let the model opponent make its first move if you train as Black.
- if(ui.playSide===-1){const m=C.fromUci(bs(b),sequence[0][0]);if(m)applyBoardMove(b,m,false);}
+ const b=makeBoard(chapter.fen,chapter.sequence,'opening-drill');
+ b.opening=chapter.key;b.flip=ui.playSide===-1;ui.board=b;
+ if(bs(b).t!==ui.playSide)applyBoardMove(b,C.fromUci(bs(b),chapter.sequence[0][0]),false);
  render();
 }
 function openingDrillControls(op){
- const b=ui.board,completed=b.moves.length>=b.sequence.length,prev=data.openingDrills[op.id];
+ const b=ui.board,completed=b.moves.length>=b.sequence.length,prev=data.openingDrills[b.opening];
  return `<div class="feedback ${completed?'good':'info'}" role="status">${completed?`✓ Line recalled! ${ui.openingDrillMistakes?'Review the missed moves and try for a clean run.':'Excellent—no hints or mistakes.'}`:`Your turn as ${a(op.side)}. Find the next model move without highlighted hints. ${ui.openingDrillMistakes>=2?'Need help? Review the original line and return here.':''}`}</div>
  ${b.error?`<div class="feedback bad">${a(b.error)}</div>`:''}
  <div class="btn-row"><button class="btn ghost small" data-action="exit-opening-drill">← Study line</button><button class="btn secondary small" data-action="start-opening-drill">↻ Try again</button></div>
  ${prev?`<p class="helper">Practice runs: ${prev.attempts}. Clean recalls: ${prev.clean||0}.</p>`:''}`;
 }
 function openingDrillMove(m){const b=ui.board;const expected=b.sequence[b.moves.length];if(!expected)return;
- if(C.uci(m)!==expected[0]){ui.openingDrillMistakes++;b.error='That move is legal, but it is not the move in this studied variation. Try again.';if(ui.openingDrillMistakes>=3){const next=C.fromUci(bs(b),expected[0]);if(next)b.error+=' Study hint: '+C.san(bs(b),next)+'.';}return render();}
+ if(C.uci(m)!==expected[0]){ui.openingDrillMistakes++;b.selected=-1;b.error=C.san(bs(b),m)+' is legal. In this line, consider this idea: '+expected[1];if(ui.openingDrillMistakes>=3){const next=C.fromUci(bs(b),expected[0]);if(next)b.error+=' Study hint: '+C.san(bs(b),next)+'.';}return render();}
  applyBoardMove(b,m,false);
  while(b.moves.length<b.sequence.length&&bs(b).t!==ui.playSide){const x=C.fromUci(bs(b),b.sequence[b.moves.length][0]);if(!x)break;applyBoardMove(b,x,false);}
  if(b.moves.length===b.sequence.length){const old=data.openingDrills[b.opening]||{attempts:0,clean:0};data.openingDrills[b.opening]={attempts:old.attempts+1,clean:(old.clean||0)+(ui.openingDrillMistakes===0?1:0),last:now()};save();}
@@ -818,7 +838,8 @@ function action(name,el){switch(name){
  case'board-back':return navigateBoardBack();case'board-next':return navigateBoardNext();case'board-restart':return restartBoard();case'board-flip':ui.board.flip=!ui.board.flip;return render();
  case'promote':{const m=ui.board?.pending?.find(x=>C.uci(x)===el.dataset.uci);if(m)handleMove(m);return;}
  case'analyze-position':return analysePosition();
- case'select-opening':ui.openingId=el.dataset.opening;ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
+ case'opening-chapter':ui.openingBranch=el.dataset.branch==='1';ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
+ case'select-opening':ui.openingBranch=false;ui.openingId=el.dataset.opening;ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
  case'toggle-repertoire':{const id=el.dataset.opening;if(data.repertoire.includes(id))data.repertoire=data.repertoire.filter(x=>x!==id);else data.repertoire.push(id);save();return render();}
  case'start-opening-drill':return startOpeningDrill();
  case'exit-opening-drill':ui.openingPhase='explore';ui.board=null;return render();
@@ -869,6 +890,7 @@ document.addEventListener('error',event=>{
 document.addEventListener('change',e=>{
  if(e.target.id==='import-pgn'){loadPGNfile(e.target.files?.[0]);e.target.value='';}
  if(e.target.id==='import-progress'){loadBackup(e.target.files?.[0]);e.target.value='';}
+ if(e.target.id==='study-opening')return action('select-opening',{dataset:{opening:e.target.value}});
  if(e.target.id==='opening-practice'){ui.practiceOpening=e.target.value;render();}
  if(e.target.id==='engine-mode'){data.settings.mode=e.target.value;engine.stop();save();render();}
  if(e.target.id==='engine-depth'){data.settings.depth=Number(e.target.value);save();render();}

@@ -13,7 +13,7 @@ global.document={getElementById(id){return elements.get(id)||null;},addEventList
 global.scrollTo=()=>{};
 require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../board-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
-require('../puzzle-bank.js');require('../app.js');
+require('../opening-study.js');require('../puzzle-bank.js');require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
 function press(action,props={}) {callbacks.click({preventDefault(){},target:{closest(sel){if(sel==='[data-sq]')return null;return {dataset:{action,...props}};}}});}
 function nav(page,id=null){t.nav(page,id);}
@@ -373,3 +373,18 @@ global.Date=class extends RealDate{constructor(...args){super(...(args.length?ar
 press('start-daily');assert.notEqual(t.ui.practiceId,daily);
 global.Date=RealDate;
 console.log('PASS: all rated positions, automatic replies, promotions, daily retry, completion and date rotation');
+
+for(const [id,study] of Object.entries(global.OPENING_STUDIES)){
+ nav('openings');press('select-opening',{opening:id});
+ for(const branch of [false,true]){
+  press('opening-chapter',{branch:branch?'1':'0'});
+  const b=t.ui.board,notes=branch?study.branch:study.notes;
+  assert.equal(b.sequence.length,notes.length);
+  for(const note of notes){press('board-next');assert(app.innerHTML.includes(note));}
+  press('start-opening-drill');
+  const drill=t.ui.board;
+  while(drill.moves.length<drill.sequence.length)move(drill.sequence[drill.moves.length][0]);
+  assert(t.data.openingDrills[branch?id+'-branch':id].clean);
+ }
+}
+console.log('PASS: annotated study and player-side recall for all 20 opening chapters');
