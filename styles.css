@@ -364,3 +364,11 @@ h1,h2,h3{letter-spacing:-.45px}
 .stockfish-inline .panel-desc{margin:10px 0 0}
 .stockfish-inline .engine-result{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.7;font-size:12px}
 @media(max-width:560px){.stockfish-inline{padding:13px 12px}.stockfish-inline .panel-title h3{font-size:14px}}
+
+.board {position:relative}
+.move-arrow {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:.88}
+.move-arrow path {fill:none;stroke:#ffce49;stroke-width:.13;stroke-linecap:round}
+.move-arrow polygon {fill:#ffce49}
+.move-arrow g {filter:drop-shadow(0 .025px .035px #342710)}
+.board:has(.move-arrow) .sq {touch-action:none;user-select:none}
+.board .sq img {pointer-events:none;-webkit-user-drag:none}

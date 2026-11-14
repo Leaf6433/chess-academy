@@ -42,6 +42,7 @@ function questionBoard(q){
  return b;
 }
 const lessonOrder=D.modules.flatMap(m=>m.ids), lessons=new Map(D.lessons.map(l=>[l.id,l])),practiceBank=[...boardDrills.practice,...D.exercises],questions=new Map([...practiceBank,...foundation,...masteryBoards,...boardDrills.mastery,...masteryConcepts,...puzzles].map(e=>[e.id,e]));
+questions.set('italian-transfer',{id:'italian-transfer',lesson:8,kind:'board',fen:'r1bq1rk1/1pp2pp1/pbnp1n1p/4p3/4P3/1BPP1N1P/PP3PP1/RNBQR1K1 w - - 0 10',answer:'d3d4',prompt:'Use the support behind e4 to challenge the center with a pawn.',hint:'What happens to e4 if the d-pawn advances?',explanation:'d4 attacks e5. Your rook on e1 still protects e4 and the c3 pawn can recapture on d4.'});
 function lessonExercises(l){
  const boards=l.exercises.filter(q=>q.kind==='board');
  const concept=l.exercises.find(q=>q.kind==='mc');
@@ -133,7 +134,7 @@ function dashboard(){
   <div class="study-hero-copy"><div class="studio-eyebrow">YOUR CHESS JOURNEY</div>
    <h1>Welcome to your<br><span>Chess Academy.</span></h1>
    <p>Learn, practice, and improve at your own pace. Every great game begins with a good move.</p>
-   <div class="study-quick-actions">
+   <div class="study-quick-actions">${workButton('model','italian','Learn my first opening')}
     <button class="study-cta primary" data-page="lesson" data-id="${id}"><span>▷</span> Continue course</button>
     <button class="study-cta" data-page="practice" data-filter="puzzles"><span>◎</span> Practice mode</button>
     <button class="study-cta" data-page="play"><span>♞</span> Play vs. AI</button>
@@ -194,6 +195,24 @@ function evalAllowed(b){
   (ui.page==='analyze'&&!!ui.game&&b.kind==='analysis')||
   (ui.page==='openings'&&ui.openingPhase==='explore'&&b.kind==='opening'));
 }
+function guidedMove(b){
+ if(!b.guided||!b.sequence)return null;
+ const ply=b.moves.length;
+ if(ui.page==='workshop'&&ui.work?.mode==='model'){
+  const model=workshops[ui.work.key];
+  if(model.stops[ply]&&!ui.work.showArrow&&!(ui.work.key==='italian'&&ply<=4))return null;
+ }else if(!((ui.page==='lesson'&&ui.phase!=='mastery'&&b.kind==='lesson')||(ui.page==='openings'&&b.kind==='opening')))return null;
+ return b.sequence[ply]?.[0];
+}
+function arrowOverlay(b,uci){
+ const points=[uci.slice(0,2),uci.slice(2,4)].map(square=>{
+  const index=C.index(square),file=index%16,row=Math.floor(index/16);
+  return [(b.flip?7-file:file)+0.5,(b.flip?7-row:row)+0.5];
+ });
+ const [[x,y],[toX,toY]]=points,angle=Math.atan2(toY-y,toX-x)*180/Math.PI;
+ const length=Math.hypot(toX-x,toY-y);
+ return `<svg class="move-arrow" viewBox="0 0 8 8" aria-hidden="true" data-arrow="${uci}"><g transform="translate(${x} ${y}) rotate(${angle})"><path d="M .18 0 H ${length-.34}" /><polygon points="${length-.4},-.21 ${length-.04},0 ${length-.4},.21"/></g></svg>`;
+}
 function boardInner(b,{viewOnly=false}={}){
  const s=bs(b),valid=C.legal(s),sel=valid.filter(m=>m[0]===b.selected).map(m=>m[1]);const rows=[];
  for(let r=0;r<8;r++)for(let f=0;f<8;f++){
@@ -202,7 +221,7 @@ function boardInner(b,{viewOnly=false}={}){
   const dark=(row+file)%2===1;
   rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':neoPiece((C.side(p)===1?'w':'b')+p.toLowerCase())}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
  }
- return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}</div></div>`;
+ return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}${!viewOnly&&guidedMove(b)?arrowOverlay(b,guidedMove(b)):''}</div></div>`;
 }
 function boardHTML(b,opts={}){
  if(!b)return '';
@@ -269,10 +288,10 @@ function promotionChoices(b){return b.pending?`<div class="feedback gold">Choose
 function boardControls(b,{engineAction=false}={}){if(!b)return '';
  const step=b.guided?b.sequence[b.moves.length]:null;
  const done=b.moves.length>=b.sequence.length;
- return `<div class="btn-row" style="margin-top:13px"><button class="btn ghost small" data-action="board-back" ${b.moves.length?'':'disabled'}>← Back</button><button class="btn secondary small" data-action="board-next" ${step?'':'disabled'}>Next move →</button><button class="btn ghost small" data-action="board-restart">Restart</button><button class="btn ghost small" data-action="board-flip">⇅ Flip</button></div>
+ return `<div class="btn-row" style="margin-top:13px"><button class="btn ghost small" data-action="board-back" ${b.moves.length?'':'disabled'}>← Back</button><button class="btn secondary small" data-action="board-next" ${step?'':'disabled'}>Play move for me</button><button class="btn ghost small" data-action="board-restart">Restart</button><button class="btn ghost small" data-action="board-flip">⇅ Flip</button></div>
 
  ${b.error?`<div class="feedback bad" role="status">${a(b.error)}</div>`:''}
- ${step?`<div class="feedback info"><strong>Next: ${a(C.label(bs(b),C.fromUci(bs(b),step[0])||C.legal(bs(b))[0]))}</strong><br>${a(step[1])}</div>`:b.kind==='lesson'||b.kind==='opening'?b.sequence.length?`<div class="feedback">Guided line complete. Explore legal continuations or restart to practice it again.</div>`:`<div class="feedback gold">No guided moves are available for this example. Choose a different walkthrough or explore the position.</div>`:''}
+ ${step?`<div class="feedback info"><strong>Follow the arrow: ${a(C.label(bs(b),C.fromUci(bs(b),step[0])||C.legal(bs(b))[0]))}</strong><br>${a(step[1])}</div>`:b.kind==='lesson'||b.kind==='opening'?b.sequence.length?`<div class="feedback">Guided line complete. Explore legal continuations or restart to practice it again.</div>`:`<div class="feedback gold">No guided moves are available for this example. Choose a different walkthrough or explore the position.</div>`:''}
  ${b.moves.length?`<div class="move-list" aria-label="Replay moves">${b.labels.map((m,i)=>`<button class="move ${i===b.moves.length-1?'active':''}" data-action="board-jump" data-ply="${i+1}" title="Replay to this move">${a(m)}</button>`).join('')}</div>`:''}${engineAction?`<button class="btn ghost small" data-action="analyze-position">♞ Ask Stockfish about this position</button>`:''}`;
 }
 function initLesson(id,phase='read'){
@@ -347,7 +366,7 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
   const scene=lessonScenes.get(l.id);
-  const body=`<div class="lesson-reading-layout">
+  const body=`<div class="lesson-reading-layout">${workshopLinks(l.id)}
    <div class="lesson-time-plan"><strong>Suggested 25-minute study route</strong><span>Core ideas · 5 min</span><span>Detailed topics · 9 min</span><span>Two boards · 6 min</span><span>Recall and practice · 5 min</span></div>
    <section class="panel lesson-reading-panel lesson-intro" aria-label="Lesson introduction">
     <div class="eyebrow">LEARN · CORE CONCEPTS</div>
@@ -550,7 +569,7 @@ function practicePage(){
  const journalDue=ui.filter==='due'?data.journal.filter(m=>data.review[m.id]?.due<=now()):[];
  wrap(`${header('PRACTICE STUDIO','Train what matters','Choose specific skills or work through reviews scheduled from your mistakes. Most activities are interactive board positions.')}
  ${ui.filter==='foundation'?`<div class="panel" style="margin-bottom:14px"><span class="chip gold">BEGINNER TRAINING · ${foundation.filter(e=>data.practiceSolved[e.id]).length}/${foundation.length} PRACTICED</span><h2 style="margin:12px 0 7px">Practice skills that decide real games</h2><p class="panel-desc">Short, visually grounded questions about hanging queens, blunder checks, king safety, and passed pawns. Some positions are reconstructed from actual anonymized game records. These drills reinforce the 40-lesson course; they do not count as unassisted lesson mastery.</p><div class="btn-row"><button class="btn ghost small" data-page="lesson" data-id="1">Review blunder-prevention lesson</button><button class="btn ghost small" data-page="analyze">Analyze a PGN →</button></div></div>`:''}
- ${dailyCard()}<div class="toolbar">${renderPracticeFilters()}</div>
+ ${dailyCard()}<div class="panel"><h2>Board workshops</h2>${workshopLinks()}${workButton('mixed','','Start mixed review')}</div><div class="toolbar">${renderPracticeFilters()}</div>
  ${ui.filter==='opening'?`<div class="panel"><label for="opening-practice">Practice an opening</label> <select id="opening-practice">${[...new Set(puzzles.filter(q=>q.opening).map(q=>q.opening))].map(label=>`<option ${label===(ui.practiceOpening||'Italian Game')?'selected':''}>${a(label)}</option>`).join('')}</select><p class="helper">Each position starts after your opponent’s last move in a real game.</p></div>`:''}
  ${ui.filter==='mistakes'?`${data.journal.length?`<div class="grid-lines">${data.journal.slice().reverse().map((m,i)=>`<div class="review-item"><div><span class="chip red">${a(m.label)} · −${m.loss} cp</span><p>${a(m.title)}</p><p class="helper">${a(m.explanation)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">♞</div><h3>No game mistakes saved yet</h3><p>Import a PGN under Analyze games, run a Stockfish review, then save a missed position for practice.</p><button class="btn" data-page="analyze">Import a game →</button></div>`}`:
  (bank.length||journalDue.length)?`<div class="grid-lines">${journalDue.map(m=>`<div class="review-item"><div><span class="chip gold">GAME REVIEW · ${a(m.label)}</span><p>${a(m.title)}</p></div><button class="btn secondary small" data-action="journal-puzzle" data-jid="${a(m.id)}">Retry position →</button></div>`).join('')}${bank.map(e=>`<div class="review-item"><div style="min-width:0"><span class="chip ${data.practiceSolved[e.id]?'':'grey'}">${e.kind==='board'?'BOARD MOVE':'CONCEPT'} · ${a(e.id)}</span><p style="margin-top:8px;font-weight:700">${a(e.variation||e.prompt)}</p><p class="helper">${e.line?a((e.opening||lessons.get(e.lesson).title)+" · Puzzle rating "+e.rating+" · "+Math.ceil(e.line.length/2)+" moves"):a(lessons.get(e.lesson).title)} ${data.practiceSolved[e.id]?'· Practiced':''}</p></div><button class="btn secondary small" data-action="open-question" data-qid="${a(e.id)}">Practice →</button></div>`).join('')}</div>`:`<div class="empty"><div class="symbol">✓</div><h3>Nothing due right now</h3><p>Continue your course or choose another practice category. Reviews automatically come back after one, three, seven and more days.</p><button class="btn" data-page="curriculum">Browse lessons</button></div>`}
@@ -571,6 +590,110 @@ function openingLines(){return [
  {id:'qgd',name:'Queen’s Gambit Declined',side:'Black',intro:'Reinforce d5 with ...e6 and develop solidly.',type:'vs 1.d4',line:['d2d4','d7d5','c2c4','e7e6','b1c3','g8f6','c1g5','f8e7'],ideas:['Support d5','Develop and castle','Prepare a timely ...c5 break'],ref:'S07'},
  {id:'slav',name:'Slav Defense',side:'Black',intro:'Support the center with ...c6 while retaining bishop options.',type:'vs 1.d4',line:['d2d4','d7d5','c2c4','c7c6','g1f3','g8f6'],ideas:['Use ...c6 to reinforce d5','Retain light-bishop flexibility','Know when ...dxc4 is playable'],ref:'S07'}
  ];}
+const workshops=window.BOARD_WORKSHOPS,pairs=window.POSITION_PAIRS;
+function workshopLinks(lesson){
+ const links=[];
+ for(const [key,item] of Object.entries(workshops)){
+  if(!lesson||item.lessons.includes(lesson))links.push(workButton('model',key,item.title));
+ }
+ for(const [key,item] of Object.entries(pairs)){
+  if(!lesson||item.lessons.includes(lesson))links.push(workButton('pair',key,item.title));
+ }
+ return links.length?`<div class="btn-row" style="margin:12px 0">${links.join('')}</div>`:'';
+}
+function workButton(mode,key,label){
+ return `<button class="btn secondary small" data-action="work-start" data-mode="${mode}" data-key="${a(key)}">${a(label)} →</button>`;
+}
+function startWorkshop(mode,key){
+ ui.exam=null;ui.page='workshop';ui.work={mode,key,index:0,feedback:'',done:false};
+ const w=ui.work;
+ if(mode==='mixed'){
+  const due=Object.keys(data.review).filter(id=>data.review[id].due<=now()&&questions.get(id)?.kind==='board');
+  const journal=shuffle(data.journal).slice(0,1).map(m=>({...m,answer:m.best,topic:'Your game'}));
+  const learned=puzzles.filter(q=>q.group==='lesson'&&(data.studied[q.lesson]||data.practiceSolved[q.id]));
+  const pool=learned.length>=4?learned:puzzles.filter(q=>q.group==='lesson'&&q.rating<=1250);
+  const candidates=[...due.sort((a,b)=>data.review[a].due-data.review[b].due).map(id=>questions.get(id)),...shuffle(pool)];
+  const unique=[...new Map(candidates.map(q=>[q.id,q])).values()];
+  w.queue=shuffle([...unique.slice(0,5-journal.length),...journal]);
+  setReviewBoard();
+ }else if(mode==='pair')ui.board=makeBoard(pairs[key].positions[0],[],'workshop');
+ else ui.board=makeBoard(C.START_FEN,workshops[key].moves.split(' ').map(m=>[m,'']),'workshop');
+ render();
+}
+function setReviewBoard(){
+ const w=ui.work,q=w.queue[w.index];
+ ui.board=questionBoard(q);w.missed=false;w.feedback='';w.done=false;
+}
+function workshopPage(){
+ const w=ui.work,b=ui.board,model=workshops[w.key],pair=pairs[w.key],ply=b.moves.length;
+ let title,prompt,button='';
+ if(w.mode==='mixed'){
+  title='Mixed review';
+  if(w.index===w.queue.length)return wrap(header('PRACTICE','Review complete',w.queue.length+' positions reviewed.')+workButton('mixed','','Another set'),'Mixed review');
+  const q=w.queue[w.index];
+  prompt='Position '+(w.index+1)+' of '+w.queue.length+' · '+(bs(b).t===1?'White':'Black')+' to move. Find a strong continuation.';
+  if(w.done){prompt=q.topic||lessons.get(q.lesson)?.title||'Review';button=advanceButton('Next position');}
+ }else if(w.mode==='pair'){
+  title=pair.title;prompt=[pair.prompt,pair.second,pair.response][w.index];
+  if(w.done){prompt='Comparison complete';button=workButton('mixed','','Mixed review');}
+  else if(w.index===0&&ply)button=advanceButton('Compare the second position');
+ }else{
+  title=model.title;
+  prompt=model.stops[ply]?.[0]||model.notes[ply]||'Follow the next move on the board.';
+  if(ply===b.sequence.length){prompt='Study complete';button=w.key==='italian'?workButton('pair','center',pairs.center.title):workButton('mixed','','Mixed review');}
+  else if(!model.stops[ply])prompt+=' Follow the arrow by moving the piece.';
+ }
+ wrap(`${header('BOARD WORKSHOP',title,'')}<div class="layout-board"><div>${boardHTML(b)}</div><div class="panel"><h2>${a(prompt)}</h2>
+ ${w.feedback?`<p class="feedback info" role="status">${a(w.feedback)}</p>`:''}
+ ${b.labels.length?`<p class="helper">Played: ${a(b.labels.join(' '))}</p>`:''}
+ <div class="btn-row">${button}${w.mode==='model'&&model.stops[ply]&&!guidedMove(b)?'<button class="btn secondary" data-action="work-arrow">Show a move arrow</button>':''}<button class="btn ghost small" data-page="practice">Back to practice</button></div>${w.key==='opera'?'<p class="helper"><a href="https://www.chessranger.com/learn/games/morphy-opera-game" target="_blank" rel="noopener">Historical game score ↗</a></p>':''}</div></div>`,'Board workshop');
+}
+function advanceButton(label){return `<button class="btn" data-action="work-next">${label} →</button>`;}
+function workshopNext(){
+ const w=ui.work,b=ui.board;
+ if(w.mode==='mixed'){
+  if(!w.done)return;
+  if(++w.index<w.queue.length)setReviewBoard();
+ }else if(w.mode==='pair'){
+  if(w.index!==0||!b.moves.length)return;
+  w.index=1;ui.board=makeBoard(pairs[w.key].positions[1],[],'workshop');w.feedback='';
+ }else{
+  const ply=b.moves.length,step=b.sequence[ply];if(!step)return;
+  workshopMove(C.fromUci(bs(b),step[0]));return;
+ }
+ render();
+}
+function workshopMove(m){
+ const w=ui.work,b=ui.board,ply=b.moves.length;
+ if(w.done)return;
+ const model=workshops[w.key],pair=pairs[w.key],q=w.queue?.[w.index];
+ if(w.mode==='pair'&&w.index===0&&ply)return;
+ const expected=w.mode==='model'?b.sequence[ply]?.[0]:w.mode==='pair'?(w.index===2?pair.reply:pair.move):(q.line?.[ply]||q.answer);
+ if(!expected)return;
+ const san=C.san(bs(b),m);
+ const next=C.apply(bs(b),m),alternativeMate=q?.line&&C.checked(next)&&!C.legal(next).length;
+ if(C.uci(m)!==expected&&!alternativeMate){
+  b.selected=-1;b.pending=null;w.missed=true;w.showArrow=true;w.feedback=san+' is legal. '+(w.mode==='model'?'Look again at the plan, or follow the move arrow.':w.mode==='pair'?'Look at the squares named in the prompt.':'Look for your opponent’s reply and try another move.');return render();
+ }
+ applyBoardMove(b,m,false);
+ if(w.mode==='model'){
+  w.showArrow=false;w.feedback=san+' · '+(model.stops[ply]?.[1]||model.notes[ply]||'The game continues.');w.done=b.moves.length===b.sequence.length;
+  if(w.done&&w.key==='italian')scheduleTransfer();
+ }else if(w.mode==='pair'){
+  if(w.index===0)w.feedback=pair.first;
+  else if(w.index===1){w.index=2;b.flip=true;w.feedback='Now play the reply as Black.';}
+  else{w.done=true;w.feedback=pair.finish;if(w.key==='center')scheduleTransfer();}
+ }else if(q.line&&!alternativeMate&&b.moves.length<q.line.length){
+  applyBoardMove(b,C.fromUci(bs(b),q.line[b.moves.length]),false);w.feedback='Your opponent replied '+b.labels.at(-1)+'. Continue the line.';
+ }else{
+  w.done=true;w.feedback=q.explanation||'Review complete.';schedule(q.id,!w.missed);
+ }
+ render();
+}
+function scheduleTransfer(){
+ const id='italian-transfer';
+ if(!data.review[id]){data.review[id]={streak:0,interval:3,due:now()+3*86400000,seen:0};save();}
+}
 function openingChapter(op){
  const study=window.OPENING_STUDIES[op.id];
  if(ui.openingBranch){
@@ -590,7 +713,7 @@ function openingPage(){
  const last=b.guided&&b.moves.length<=b.sequence.length&&b.moves.length?b.sequence[b.moves.length-1]:null;
  const commentary=last?`<div class="feedback info" aria-live="polite"><strong>${a(b.labels.at(-1))}</strong> · ${a(last[1])}</div>`:'';
  wrap(`${header('OPENING LABORATORY','Learn an opening','Study a line, see how a different reply changes the plan, then play your side from memory.')}
- <div class="panel"><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
+ <div class="panel"><p>New to openings? Learn the Italian Game from the starting board, one move at a time.</p>${workButton('model','italian','Learn my first opening')}<div class="divider"></div><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
  <div class="btn-row" style="margin-top:12px">${['Model line',study.title].map((name,i)=>`<button class="btn small ${i===Number(!!ui.openingBranch)?'active':'ghost'}" data-action="opening-chapter" data-branch="${i}">${a(name)}</button>`).join('')}</div></div>
  <div class="layout-board"><div><div class="eyebrow">${drill?'RECALL TRAINING':'MODEL LINE'} · ${a(chapter.title)}</div><div style="margin-top:12px">${boardHTML(b)}${drill?openingDrillControls(op):commentary+boardControls(b,{engineAction:true})+engineResponse()}</div></div>
  <div class="panel"><div class="eyebrow">STRATEGY · PLAY AS ${a(op.side.toUpperCase())}</div><h2>${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p>
@@ -746,7 +869,7 @@ function accountPanel(){
 function settingsPage(){const st=engine.getStatus();wrap(`${header('APP SETTINGS','Make it yours','Browser-local progress works without an account. When cloud accounts are configured, you can sign in and choose exactly which progress copy to keep.')}${accountPanel()}
  <div class="cols-2"><div class="panel"><h3>Stockfish configuration</h3><p class="panel-desc">The supplied Stockfish 19 Lite engine works on ordinary modern browsers. Full multithreaded Stockfish requires a secure cross-origin-isolated site with the correct headers.</p><div class="grid-lines"><div><label for="engine-mode" class="helper">Engine profile</label><select id="engine-mode" class="select" style="width:100%;margin-top:6px"><option value="lite" ${data.settings.mode==='lite'?'selected':''}>Lite, single-threaded · fast and portable</option><option value="full" ${data.settings.mode==='full'?'selected':''} ${st.canFull?'':'disabled'}>Full, multithreaded · advanced analysis ${st.canFull?'':'(hosting headers required)'}</option></select></div><div><label for="engine-depth" class="helper">Position analysis depth</label><select id="engine-depth" class="select" style="width:100%;margin-top:6px">${[6,9,11,14,18].map(d=>`<option value="${d}" ${data.settings.depth===d?'selected':''}>Depth ${d}${d>=14?' · slower':''}</option>`).join('')}</select></div><button class="btn secondary" data-action="engine-test">Test Stockfish engine</button><div class="mini-panel"><span class="status-dot ${st.ready?'ready':''}"></span> ${a(st.ready?`Running ${st.mode}`:st.loading?'Loading…':'Not running')}<p class="helper">${a(st.error||'Stockfish starts when requested. It runs on this device, not a remote analysis server.')}</p></div></div></div>
  <div class="panel"><h3>Progress storage and backup</h3><p class="panel-desc">Your lessons, practice results, repertoires and game journal are always saved locally. If you sign in and choose a progress copy above, they can also sync securely to your account. Exporting a backup is still recommended.</p><div class="btn-row"><button class="btn" data-action="export">↓ Export progress .json</button><button class="btn secondary" data-action="progress-file">↑ Import backup</button></div><div class="divider"></div><h3>Installation</h3><p class="panel-desc">Use the included <span class="inline-code">start-server.bat</span> (Windows) or <span class="inline-code">python server.py</span>. This enables browser engine workers. Directly opening the HTML as a <span class="inline-code">file://</span> page may block WebAssembly and storage features.</p><p class="helper">PWA install depends on your browser and a secure hosting context. Your course remains free.</p></div></div><div class="panel"><h3>Privacy and limitations</h3><p class="panel-desc">Accounts and cloud storage use Supabase when enabled. Your account password is handled by Supabase Auth, not stored inside your chess progress. Games are imported manually (Chess.com game fetching is not automatic). Stockfish supplies engine evaluations; coaching explanations are authored or rules-based, not generated by an AI chat coach.</p></div>`,'Settings');}
-function render(){switch(ui.page){case'dashboard':dashboard();break;case'curriculum':curriculum();break;case'lesson':lessonPage();break;case'exercise':practiceQuestion();break;case'placement':placement();break;case'practice':practicePage();break;case'openings':openingPage();break;case'analyze':renderAnalysis();break;case'journal':journalPage();break;case'play':playPage();break;case'progress':progressPage();break;case'sources':sourcePage();break;case'settings':settingsPage();break;default:dashboard();}scheduleEvaluation();}
+function render(){switch(ui.page){case'workshop':workshopPage();break;case'dashboard':dashboard();break;case'curriculum':curriculum();break;case'lesson':lessonPage();break;case'exercise':practiceQuestion();break;case'placement':placement();break;case'practice':practicePage();break;case'openings':openingPage();break;case'analyze':renderAnalysis();break;case'journal':journalPage();break;case'play':playPage();break;case'progress':progressPage();break;case'sources':sourcePage();break;case'settings':settingsPage();break;default:dashboard();}scheduleEvaluation();}
 function nav(page,arg=null){if(page!=='lesson'&&page!=='placement')ui.exam=null;if(page==='lesson')return initLesson(Number(arg||nextLesson()));ui.page=page;ui.menu=false;ui.notice='';ui.engineResult=null;if(page==='placement'&&ui.exam?.kind!=='placement')ui.exam=null;
  if(page==='curriculum'&&arg!=null)ui.moduleOpen=Number(arg);
  if(page==='practice'&&arg!=null)ui.filter=arg;
@@ -786,6 +909,7 @@ function playPuzzleMove(q,m,exam){
  applyBoardMove(b,reply);
 }
 function handleMove(m){const b=ui.board;if(!b)return;
+ if(ui.page==='workshop')return workshopMove(m);
  if(ui.page==='openings'&&b.kind==='opening-drill')return openingDrillMove(m);
  if(ui.page==='journal'){
   const found=data.journal.find(x=>x.id===ui.journalId);if(!found)return;
@@ -819,6 +943,9 @@ function gamePgnFromBoard(b){let result='[Event "Chess Academy practice"]\n[Whit
 async function loadPGNfile(file){if(!file)return;ui.pgnText=await file.text();nav('analyze');}
 async function loadBackup(file){try{const d=JSON.parse(await file.text());if(d.version!==2||!d.mastered||!d.review)throw Error('Not a Chess Academy 2.0 progress backup.');data={...starter(),...d,opened:{...(d.opened||d.studied||{})},studied:d.opened?d.studied||{}:{},completed:d.completed||{}};save();ui.notice='Progress backup restored successfully.';nav('dashboard');}catch(e){ui.notice='Backup import failed: '+e.message;render();}}
 function action(name,el){switch(name){
+ case'work-start':return startWorkshop(el.dataset.mode,el.dataset.key);
+ case'work-arrow':ui.work.showArrow=true;return render();
+ case'work-next':return workshopNext();
  case'menu':ui.menu=!ui.menu;return render();case'close-menu':ui.menu=false;return render();case'dismiss':ui.notice='';return render();
  case'start-placement':return startAssessment('placement');
  case'select-lesson-scene':return loadLessonScene(Number(el.dataset.scene));
@@ -862,7 +989,26 @@ function action(name,el){switch(name){
  case'export':return exportProgress();case'progress-file':return $('import-progress').click();
  case'engine-test':ui.notice='Testing Stockfish…';render();engine.start(data.settings.mode).then(()=>engine.analyze(C.START_FEN,{depth:5,movetime:150})).then(x=>{ui.notice=`Stockfish ready: ${x.bestmove} at depth ${x.depth||5}.`;render();}).catch(e=>{ui.notice='Engine test failed: '+e.message;render();});return;
  }}
+let studyDrag=null,suppressDropClick=false;
+document.addEventListener('pointerdown',e=>{
+ suppressDropClick=false;studyDrag=null;
+ const square=e.target.closest?.('[data-sq]'),b=ui.board;
+ if(!square||square.disabled||!b||e.button!==0||!['lesson','opening','workshop'].includes(b.kind))return;
+ const from=Number(square.dataset.sq);
+ if(C.side(bs(b).b[from])===bs(b).t)studyDrag={id:e.pointerId,b,from};
+});
+document.addEventListener('pointercancel',()=>{studyDrag=null;});
+document.addEventListener('pointerup',e=>{
+ const drag=studyDrag;studyDrag=null;
+ if(!drag||drag.id!==e.pointerId||drag.b!==ui.board)return;
+ const square=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-sq]');
+ if(!square||square.disabled)return;
+ const to=Number(square.dataset.sq);
+ if(to===drag.from)return;
+ suppressDropClick=true;ui.board.selected=drag.from;chooseSquare(to);
+});
 document.addEventListener('click',e=>{
+ if(suppressDropClick){suppressDropClick=false;e.preventDefault();return;}
  const sq=e.target.closest?.('[data-sq]');if(sq){e.preventDefault();chooseSquare(Number(sq.dataset.sq));return;}
  const btn=e.target.closest?.('[data-page],[data-action]');if(!btn)return;
  e.preventDefault();if(btn.dataset.page){const pg=btn.dataset.page;if(pg==='lesson')nav('lesson',btn.dataset.id);else nav(pg,btn.dataset.filter??btn.dataset.module??null);return;}

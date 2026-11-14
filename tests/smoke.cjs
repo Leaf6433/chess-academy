@@ -13,7 +13,7 @@ global.document={getElementById(id){return elements.get(id)||null;},addEventList
 global.scrollTo=()=>{};
 require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../board-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
-require('../opening-study.js');require('../puzzle-bank.js');require('../app.js');
+require('../board-workshops.js');require('../opening-study.js');require('../puzzle-bank.js');require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
 function press(action,props={}) {callbacks.click({preventDefault(){},target:{closest(sel){if(sel==='[data-sq]')return null;return {dataset:{action,...props}};}}});}
 function nav(page,id=null){t.nav(page,id);}
@@ -388,3 +388,51 @@ for(const [id,study] of Object.entries(global.OPENING_STUDIES)){
  }
 }
 console.log('PASS: annotated study and player-side recall for all 20 opening chapters');
+
+for(const [key,model] of Object.entries(global.BOARD_WORKSHOPS)){
+ press('work-start',{mode:'model',key});
+ const b=t.ui.board;
+ assert.equal(t.C.toFen(b.history[0]),t.C.START_FEN);
+ for(const [ply,uci] of model.moves.split(' ').entries()){
+  if(model.stops[ply])move(uci);else press('work-next');
+  assert.equal(b.moves.at(-1),uci);
+ }
+ assert(t.ui.work.done);
+ if(key==='opera')assert(t.C.status(b.history).text.includes('Checkmate'));
+}
+for(const [key,pair] of Object.entries(global.POSITION_PAIRS)){
+ press('work-start',{mode:'pair',key});
+ move(pair.move);press('work-next');move(pair.move);
+ assert(t.ui.board.flip);move(pair.reply);assert(t.ui.work.done);
+}
+assert(t.data.review['italian-transfer'].due>Date.now()+2*86400000);
+t.data.review['italian-transfer'].due=0;
+t.data.journal.push({id:'test-workshop-mistake',fen:t.C.START_FEN,best:'e2e4',explanation:'Open the center.'});
+press('work-start',{mode:'mixed',key:''});
+const queue=t.ui.work.queue;
+assert.equal(queue.length,5);
+assert(queue.some(q=>q.id==='test-workshop-mistake')||t.data.journal.length>1);
+for(const q of queue){
+ assert(!app.innerHTML.includes('Puzzle rating'));
+ for(const uci of (q.line||[q.answer]).filter((_,i)=>i%2===0)){
+  move(uci);if(t.ui.board.pending)press('promote',{uci});
+ }
+ assert(t.ui.work.done);press('work-next');
+}
+assert(app.innerHTML.includes('Review complete'));
+console.log('PASS: model games, decision points, comparison replies, delayed transfer and mixed review');
+press('work-start',{mode:'model',key:'italian'});
+assert(app.innerHTML.includes('data-arrow="e2e4"'));
+const squareTarget=n=>({closest:()=>({dataset:{sq:String(n)}})});
+callbacks.pointerdown({target:squareTarget(t.C.index('e2')),button:0,pointerId:1});
+document.elementFromPoint=()=>squareTarget(t.C.index('e4'));
+callbacks.pointerup({pointerId:1,clientX:1,clientY:1});
+assert.deepEqual(t.ui.board.moves,['e2e4']);
+callbacks.click({preventDefault(){},target:squareTarget(t.C.index('e4'))});
+assert(app.innerHTML.includes('data-arrow="e7e5"'));
+nav('openings');press('select-opening',{opening:'caro'});
+assert(app.innerHTML.includes('data-arrow="e2e4"'));
+assert(app.innerHTML.includes('translate(3.5 1.5)'));
+press('start-opening-drill');assert(!app.innerHTML.includes('data-arrow='));
+press('work-start',{mode:'mixed',key:''});assert(!app.innerHTML.includes('data-arrow='));
+console.log('PASS: move arrows, Black orientation, drag-to-move and hidden recall solutions');
