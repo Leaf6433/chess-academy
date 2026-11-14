@@ -256,16 +256,16 @@ for(let id=1;id<=40;id++){
  assert.equal(t.ui.board.sequence.length,core.line.length,'Core model loads all demonstration moves '+id);
  assert(!app.innerHTML.includes('Guided line complete.'),'Core model is not already complete on opening '+id);
  press('board-next');
- assert.equal(t.ui.board.moves.length,1,'The first core move actually plays on the board '+id);
+ assert.equal(t.ui.board.moves.length,t.ui.board.player?Math.min(core.line.length,t.ui.board.player===1?2:3):1,'The first core move actually plays on the board '+id);
  press('board-restart');
- assert.equal(t.ui.board.moves.length,0,'Core board can restart '+id);
+ assert.equal(t.ui.board.moves.length,t.ui.board.player===-1?1:0,'Core board can restart '+id);
  press('select-lesson-scene',{scene:'1'});
  assert.equal(t.ui.board.sequence.length,sample.line.length,'Second walkthrough loads '+id);
  assert(!app.innerHTML.includes('Guided line complete.'),'Second walkthrough is not already complete '+id);
  press('board-next');
- assert.equal(t.ui.board.moves.length,1,'The second walkthrough move plays '+id);
+ assert.equal(t.ui.board.moves.length,t.ui.board.player?Math.min(sample.line.length,t.ui.board.history[0].t===t.ui.board.player?2:3):1,'The second walkthrough move plays '+id);
  press('select-lesson-scene',{scene:'0'});
- assert.equal(t.ui.board.moves.length,0,'Switching back to core resets position '+id);
+ assert.equal(t.ui.board.moves.length,t.ui.board.player===-1?1:0,'Switching back to core resets position '+id);
 
  assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Full-width lesson layout '+id);
  assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Spacious core teaching '+id);
@@ -378,27 +378,40 @@ for(const [id,study] of Object.entries(global.OPENING_STUDIES)){
  nav('openings');press('select-opening',{opening:id});
  for(const branch of [false,true]){
   press('opening-chapter',{branch:branch?'1':'0'});
-  const b=t.ui.board,notes=branch?study.branch:study.notes;
-  assert.equal(b.sequence.length,notes.length);
-  for(const note of notes){press('board-next');assert(app.innerHTML.includes(note));}
-  press('start-opening-drill');
-  const drill=t.ui.board;
-  while(drill.moves.length<drill.sequence.length)move(drill.sequence[drill.moves.length][0]);
-  assert(t.data.openingDrills[branch?id+'-branch':id].clean);
+  for(const color of ['White','Black']){
+   press('study-side',{side:color});
+   if(t.ui.openingPhase==='drill')press('exit-opening-drill');
+   const b=t.ui.board,side=color==='White'?1:-1;
+   while(b.moves.length<b.sequence.length){
+    assert.equal(t.C.side(b.history.at(-1).b[t.C.fromUci(b.history.at(-1),b.sequence[b.moves.length][0])[0]]),side);
+    const ply=b.moves.length;move(b.sequence[ply][0]);
+    assert(app.innerHTML.includes(b.sequence[ply][1]));
+    assert.equal(b.moves.length,Math.min(ply+2,b.sequence.length));
+   }
+   press('board-back');assert.equal(b.history.at(-1).t,side);
+   press('board-restart');assert.equal(b.history.at(-1).t,side);
+   press('start-opening-drill');
+   const drill=t.ui.board;
+   while(drill.moves.length<drill.sequence.length){assert.equal(drill.history.at(-1).t,side);move(drill.sequence[drill.moves.length][0]);}
+   assert(t.data.openingDrills[drill.scoreKey].clean);press('exit-opening-drill');
+  }
  }
 }
 console.log('PASS: annotated study and player-side recall for all 20 opening chapters');
 
 for(const [key,model] of Object.entries(global.BOARD_WORKSHOPS)){
  press('work-start',{mode:'model',key});
- const b=t.ui.board;
- assert.equal(t.C.toFen(b.history[0]),t.C.START_FEN);
- for(const [ply,uci] of model.moves.split(' ').entries()){
-  if(model.stops[ply])move(uci);else press('work-next');
-  assert.equal(b.moves.at(-1),uci);
+ for(const color of ['Black','White']){
+  press('study-side',{side:color});const b=t.ui.board;
+  assert.equal(t.C.toFen(b.history[0]),t.C.START_FEN);
+  while(!t.ui.work.done){
+   assert.equal(b.history.at(-1).t,color==='White'?1:-1);
+   const ply=b.moves.length;move(b.sequence[ply][0]);
+   assert.equal(b.moves.length,Math.min(ply+2,b.sequence.length));
+   assert(b.sequence[ply][1]);
+  }
+  if(key==='opera')assert(t.C.status(b.history).text.includes('Checkmate'));
  }
- assert(t.ui.work.done);
- if(key==='opera')assert(t.C.status(b.history).text.includes('Checkmate'));
 }
 for(const [key,pair] of Object.entries(global.POSITION_PAIRS)){
  press('work-start',{mode:'pair',key});
@@ -427,12 +440,12 @@ const squareTarget=n=>({closest:()=>({dataset:{sq:String(n)}})});
 callbacks.pointerdown({target:squareTarget(t.C.index('e2')),button:0,pointerId:1});
 document.elementFromPoint=()=>squareTarget(t.C.index('e4'));
 callbacks.pointerup({pointerId:1,clientX:1,clientY:1});
-assert.deepEqual(t.ui.board.moves,['e2e4']);
+assert.deepEqual(t.ui.board.moves,['e2e4','e7e5']);
 callbacks.click({preventDefault(){},target:squareTarget(t.C.index('e4'))});
-assert(app.innerHTML.includes('data-arrow="e7e5"'));
+assert(app.innerHTML.includes('data-arrow="g1f3"'));
 nav('openings');press('select-opening',{opening:'caro'});
-assert(app.innerHTML.includes('data-arrow="e2e4"'));
-assert(app.innerHTML.includes('translate(3.5 1.5)'));
+assert(app.innerHTML.includes('data-arrow="c7c6"'));
+assert(app.innerHTML.includes('translate(5.5 6.5)'));
 press('start-opening-drill');assert(!app.innerHTML.includes('data-arrow='));
 press('work-start',{mode:'mixed',key:''});assert(!app.innerHTML.includes('data-arrow='));
 console.log('PASS: move arrows, Black orientation, drag-to-move and hidden recall solutions');

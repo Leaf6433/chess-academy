@@ -225,7 +225,7 @@ function boardInner(b,{viewOnly=false}={}){
 }
 function boardHTML(b,opts={}){
  if(!b)return '';
- const base=boardInner(b,opts)+(opts.viewOnly?'':promotionChoices(b));
+ const base=boardInner(b,opts)+(b.kind==='lesson'&&b.player&&b.moves.length?`<div class="feedback info">${studyRound(b)}</div>`:'')+(opts.viewOnly?'':promotionChoices(b));
  if(!evalAllowed(b)||opts.viewOnly)return base;
  const fen=C.toFen(bs(b)),saved=evaluationCache.get(fen),pct=saved?.percent??50;
  const label=saved?.label??'…';
@@ -291,12 +291,12 @@ function boardControls(b,{engineAction=false}={}){if(!b)return '';
  return `<div class="btn-row" style="margin-top:13px"><button class="btn ghost small" data-action="board-back" ${b.moves.length?'':'disabled'}>← Back</button><button class="btn secondary small" data-action="board-next" ${step?'':'disabled'}>Play move for me</button><button class="btn ghost small" data-action="board-restart">Restart</button><button class="btn ghost small" data-action="board-flip">⇅ Flip</button></div>
 
  ${b.error?`<div class="feedback bad" role="status">${a(b.error)}</div>`:''}
- ${step?`<div class="feedback info"><strong>Follow the arrow: ${a(C.label(bs(b),C.fromUci(bs(b),step[0])||C.legal(bs(b))[0]))}</strong><br>${a(step[1])}</div>`:b.kind==='lesson'||b.kind==='opening'?b.sequence.length?`<div class="feedback">Guided line complete. Explore legal continuations or restart to practice it again.</div>`:`<div class="feedback gold">No guided moves are available for this example. Choose a different walkthrough or explore the position.</div>`:''}
+ ${step?`<div class="feedback info"><strong>Follow the arrow: ${a(C.label(bs(b),C.fromUci(bs(b),step[0])||C.legal(bs(b))[0]))}</strong><br>${a(step[1])}</div>`:b.kind==='lesson'||b.kind==='opening'?b.sequence.length?`<div class="feedback">${b.player?'Line complete. Try recall or study the other side.':'Guided line complete. Explore legal continuations or restart to practice it again.'}</div>`:`<div class="feedback gold">No guided moves are available for this example. Choose a different walkthrough or explore the position.</div>`:''}
  ${b.moves.length?`<div class="move-list" aria-label="Replay moves">${b.labels.map((m,i)=>`<button class="move ${i===b.moves.length-1?'active':''}" data-action="board-jump" data-ply="${i+1}" title="Replay to this move">${a(m)}</button>`).join('')}</div>`:''}${engineAction?`<button class="btn ghost small" data-action="analyze-position">♞ Ask Stockfish about this position</button>`:''}`;
 }
 function initLesson(id,phase='read'){
  const l=lessons.get(Number(id));if(!l)return;
- ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
+ ui.lessonColor=null;ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
 }
 const VOCABULARY=[
  ['opposition','When two kings face each other on the same row or column with exactly one empty square between them. The king forced to move first may need to step aside.'],
@@ -361,8 +361,12 @@ function loadLessonScene(index){
  ui.engineResult=null;render();
 }
 function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=lessonExercises(l).length;
+ if(l.module===3&&ui.board?.kind==='lesson'&&!ui.board.player){
+  const color=ui.lessonColor||([10,11,12,29,30].includes(l.id)?'Black':'White');
+  prepareSide(ui.board,color);
+ }
  const top=`${header(`MODULE ${l.module+1} / LESSON ${index+1}`,l.title,l.target)}<div class="btn-row" style="margin:-4px 0 18px"><span class="chip ${done?'':'gold'}">${done?'✓ Mastered':lessonExercises(l).every(q=>!!data.practiceSolved[q.id])?'✓ Practice completed · mastery pending':data.studied[l.id]?'◉ Studied · mastery pending':data.placementCredit[l.id]?'◇ Placement credit · not studied':'Not yet mastered'}</span><span class="chip grey">${l.length} min target · ${qCount} checks</span><button class="btn ghost small" data-page="curriculum">← All lessons</button></div>
- <div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
+ ${l.module===3&&ui.board?.kind==='lesson'?studySidePicker(ui.board.player===1?'White':'Black'):''}<div class="lesson-steps"><button class="phase ${ui.phase==='read'?'current':'done'}" data-action="lesson-phase" data-phase="read">1. Learn the concept</button><button class="phase ${ui.phase==='practice'?'current':''}" data-action="lesson-phase" data-phase="practice">2. Guided practice</button><button class="phase ${ui.phase==='mastery'?'current':''}" data-action="start-mastery">3. Mastery check</button></div>`;
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
   const scene=lessonScenes.get(l.id);
@@ -604,7 +608,7 @@ function workshopLinks(lesson){
 function workButton(mode,key,label){
  return `<button class="btn secondary small" data-action="work-start" data-mode="${mode}" data-key="${a(key)}">${a(label)} →</button>`;
 }
-function startWorkshop(mode,key){
+function startWorkshop(mode,key,color='White'){
  ui.exam=null;ui.page='workshop';ui.work={mode,key,index:0,feedback:'',done:false};
  const w=ui.work;
  if(mode==='mixed'){
@@ -617,7 +621,11 @@ function startWorkshop(mode,key){
   w.queue=shuffle([...unique.slice(0,5-journal.length),...journal]);
   setReviewBoard();
  }else if(mode==='pair')ui.board=makeBoard(pairs[key].positions[0],[],'workshop');
- else ui.board=makeBoard(C.START_FEN,workshops[key].moves.split(' ').map(m=>[m,'']),'workshop');
+ else {
+  const model=workshops[key];
+  ui.board=makeBoard(C.START_FEN,model.moves.split(' ').map((m,i)=>[m,model.stops[i]?.[1]||model.notes[i]]),'workshop');
+  prepareSide(ui.board,color);w.color=color;
+ }
  render();
 }
 function setReviewBoard(){
@@ -643,7 +651,8 @@ function workshopPage(){
   if(ply===b.sequence.length){prompt='Study complete';button=w.key==='italian'?workButton('pair','center',pairs.center.title):workButton('mixed','','Mixed review');}
   else if(!model.stops[ply])prompt+=' Follow the arrow by moving the piece.';
  }
- wrap(`${header('BOARD WORKSHOP',title,'')}<div class="layout-board"><div>${boardHTML(b)}</div><div class="panel"><h2>${a(prompt)}</h2>
+ wrap(`${header('BOARD WORKSHOP',title,'')}${w.mode==='model'?studySidePicker(w.color):''}<div class="layout-board"><div>${boardHTML(b)}</div><div class="panel"><h2>${a(prompt)}</h2>
+ ${w.mode==='model'&&ply?`<div class="feedback info">${studyRound(b)}</div>`:''}
  ${w.feedback?`<p class="feedback info" role="status">${a(w.feedback)}</p>`:''}
  ${b.labels.length?`<p class="helper">Played: ${a(b.labels.join(' '))}</p>`:''}
  <div class="btn-row">${button}${w.mode==='model'&&model.stops[ply]&&!guidedMove(b)?'<button class="btn secondary" data-action="work-arrow">Show a move arrow</button>':''}<button class="btn ghost small" data-page="practice">Back to practice</button></div>${w.key==='opera'?'<p class="helper"><a href="https://www.chessranger.com/learn/games/morphy-opera-game" target="_blank" rel="noopener">Historical game score ↗</a></p>':''}</div></div>`,'Board workshop');
@@ -677,7 +686,7 @@ function workshopMove(m){
  }
  applyBoardMove(b,m,false);
  if(w.mode==='model'){
-  w.showArrow=false;w.feedback=san+' · '+(model.stops[ply]?.[1]||model.notes[ply]||'The game continues.');w.done=b.moves.length===b.sequence.length;
+  autoReply(b);w.showArrow=false;w.feedback='';w.done=b.moves.length===b.sequence.length;
   if(w.done&&w.key==='italian')scheduleTransfer();
  }else if(w.mode==='pair'){
   if(w.index===0)w.feedback=pair.first;
@@ -694,6 +703,38 @@ function scheduleTransfer(){
  const id='italian-transfer';
  if(!data.review[id]){data.review[id]={streak:0,interval:3,due:now()+3*86400000,seen:0};save();}
 }
+function studySidePicker(side){
+ return `<div class="btn-row" aria-label="Choose your side"><span>Play as</span> ${['White','Black'].map(color=>`<button class="btn small ${color===side?'active':'ghost'}" aria-pressed="${color===side}" data-action="study-side" data-side="${color}">${color}</button>`).join('')}</div>`;
+}
+function autoReply(b){
+ const step=b.sequence[b.moves.length];
+ if(step&&bs(b).t!==b.player)applyBoardMove(b,C.fromUci(bs(b),step[0]),false);
+}
+function prepareSide(b,color){
+ b.player=color==='Black'?-1:1;b.flip=b.player===-1;autoReply(b);
+}
+function studyRound(b){
+ const end=b.moves.length;
+ if(!end)return '';
+ const lastWasPlayer=b.history[end-1].t===b.player;
+ const start=lastWasPlayer?end-1:Math.max(0,end-2);
+ return b.labels.slice(start).map((label,i)=>{
+  const ply=start+i,who=b.history[ply].t===b.player?'Your move':'Opponent’s move';
+  return `<p><strong>${who} · ${a(label)}</strong><br>${a(b.sequence[ply][1])}</p>`;
+ }).join('');
+}
+function openingStudyMove(m){
+ const b=ui.board,step=b.sequence[b.moves.length];if(!step)return;
+ if(C.uci(m)!==step[0]){
+  b.selected=-1;b.pending=null;b.error='This line illustrates a different idea. '+step[1];return render();
+ }
+ applyBoardMove(b,m,false);autoReply(b);render();
+}
+function rewindStudy(b,target){
+ while(b.moves.length>target){b.moves.pop();b.labels.pop();b.history.pop();}
+ b.selected=-1;b.pending=null;b.error='';b.guided=true;b.last=null;
+ autoReply(b);render();
+}
 function openingChapter(op){
  const study=window.OPENING_STUDIES[op.id];
  if(ui.openingBranch){
@@ -707,16 +748,15 @@ function openingPage(){
  const study=window.OPENING_STUDIES[op.id],chapter=openingChapter(op),drill=ui.openingPhase==='drill';
  if(!ui.board||ui.board.opening!==chapter.key){
   ui.board=makeBoard(chapter.fen,chapter.sequence,'opening');
-  ui.board.opening=chapter.key;ui.board.flip=op.side==='Black';
+  ui.board.opening=chapter.key;prepareSide(ui.board,ui.openingColor||op.side);
  }
  const b=ui.board,selected=data.repertoire.includes(op.id);
- const last=b.guided&&b.moves.length<=b.sequence.length&&b.moves.length?b.sequence[b.moves.length-1]:null;
- const commentary=last?`<div class="feedback info" aria-live="polite"><strong>${a(b.labels.at(-1))}</strong> · ${a(last[1])}</div>`:'';
+ const commentary=b.moves.length?`<div class="feedback info" aria-live="polite">${studyRound(b)}</div>`:'';
  wrap(`${header('OPENING LABORATORY','Learn an opening','Study a line, see how a different reply changes the plan, then play your side from memory.')}
  <div class="panel"><p>New to openings? Learn the Italian Game from the starting board, one move at a time.</p>${workButton('model','italian','Learn my first opening')}<div class="divider"></div><label for="study-opening">Opening</label> <select id="study-opening">${lines.map(o=>`<option value="${o.id}" ${o.id===op.id?'selected':''}>${a(o.name)} · ${o.side}</option>`).join('')}</select>
- <div class="btn-row" style="margin-top:12px">${['Model line',study.title].map((name,i)=>`<button class="btn small ${i===Number(!!ui.openingBranch)?'active':'ghost'}" data-action="opening-chapter" data-branch="${i}">${a(name)}</button>`).join('')}</div></div>
+ ${studySidePicker(ui.openingColor||op.side)}<div class="btn-row" style="margin-top:12px">${['Model line',study.title].map((name,i)=>`<button class="btn small ${i===Number(!!ui.openingBranch)?'active':'ghost'}" data-action="opening-chapter" data-branch="${i}">${a(name)}</button>`).join('')}</div></div>
  <div class="layout-board"><div><div class="eyebrow">${drill?'RECALL TRAINING':'MODEL LINE'} · ${a(chapter.title)}</div><div style="margin-top:12px">${boardHTML(b)}${drill?openingDrillControls(op):commentary+boardControls(b,{engineAction:true})+engineResponse()}</div></div>
- <div class="panel"><div class="eyebrow">STRATEGY · PLAY AS ${a(op.side.toUpperCase())}</div><h2>${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p>
+ <div class="panel"><div class="eyebrow">STRATEGY · PLAY AS ${a((ui.openingColor||op.side).toUpperCase())}</div><h2>${a(op.name)}</h2><p class="panel-desc">${a(op.intro)}</p>
  ${drill?'':`<h3>${ui.openingBranch?'What changes?':'What to look for'}</h3><p class="panel-desc">${a(ui.openingBranch?study.branch[0]:op.ideas.join('. ')+'.')}</p>
  <div class="btn-row"><button class="btn" data-action="start-opening-drill">Practice from memory →</button>${!ui.openingBranch?`<button class="btn secondary" data-action="opening-chapter" data-branch="1">Study ${a(study.title)} →</button>`:''}</div>`}
  <div class="divider"></div><button class="btn ghost small" data-action="toggle-repertoire" data-opening="${op.id}">${selected?'★ Shortlisted · remove':'☆ Add to my shortlist'}</button>
@@ -724,15 +764,15 @@ function openingPage(){
 }
 function startOpeningDrill(){
  const op=openingLines().find(o=>o.id===ui.openingId),chapter=openingChapter(op);
- ui.openingPhase='drill';ui.playSide=op.side==='Black'?-1:1;ui.openingDrillMistakes=0;
+ ui.openingPhase='drill';ui.playSide=(ui.openingColor||op.side)==='Black'?-1:1;ui.openingDrillMistakes=0;
  const b=makeBoard(chapter.fen,chapter.sequence,'opening-drill');
- b.opening=chapter.key;b.flip=ui.playSide===-1;ui.board=b;
+ b.opening=chapter.key;b.scoreKey=chapter.key+(ui.openingColor&&ui.openingColor!==op.side?'-'+ui.openingColor:'');b.flip=ui.playSide===-1;ui.board=b;
  if(bs(b).t!==ui.playSide)applyBoardMove(b,C.fromUci(bs(b),chapter.sequence[0][0]),false);
  render();
 }
 function openingDrillControls(op){
- const b=ui.board,completed=b.moves.length>=b.sequence.length,prev=data.openingDrills[b.opening];
- return `<div class="feedback ${completed?'good':'info'}" role="status">${completed?`✓ Line recalled! ${ui.openingDrillMistakes?'Review the missed moves and try for a clean run.':'Excellent—no hints or mistakes.'}`:`Your turn as ${a(op.side)}. Find the next model move without highlighted hints. ${ui.openingDrillMistakes>=2?'Need help? Review the original line and return here.':''}`}</div>
+ const b=ui.board,completed=b.moves.length>=b.sequence.length,prev=data.openingDrills[b.scoreKey];
+ return `<div class="feedback ${completed?'good':'info'}" role="status">${completed?`✓ Line recalled! ${ui.openingDrillMistakes?'Review the missed moves and try for a clean run.':'Excellent—no hints or mistakes.'}`:`Your turn as ${a(ui.openingColor||op.side)}. Find the next model move without highlighted hints. ${ui.openingDrillMistakes>=2?'Need help? Review the original line and return here.':''}`}</div>
  ${b.error?`<div class="feedback bad">${a(b.error)}</div>`:''}
  <div class="btn-row"><button class="btn ghost small" data-action="exit-opening-drill">← Study line</button><button class="btn secondary small" data-action="start-opening-drill">↻ Try again</button></div>
  ${prev?`<p class="helper">Practice runs: ${prev.attempts}. Clean recalls: ${prev.clean||0}.</p>`:''}`;
@@ -741,7 +781,7 @@ function openingDrillMove(m){const b=ui.board;const expected=b.sequence[b.moves.
  if(C.uci(m)!==expected[0]){ui.openingDrillMistakes++;b.selected=-1;b.error=C.san(bs(b),m)+' is legal. In this line, consider this idea: '+expected[1];if(ui.openingDrillMistakes>=3){const next=C.fromUci(bs(b),expected[0]);if(next)b.error+=' Study hint: '+C.san(bs(b),next)+'.';}return render();}
  applyBoardMove(b,m,false);
  while(b.moves.length<b.sequence.length&&bs(b).t!==ui.playSide){const x=C.fromUci(bs(b),b.sequence[b.moves.length][0]);if(!x)break;applyBoardMove(b,x,false);}
- if(b.moves.length===b.sequence.length){const old=data.openingDrills[b.opening]||{attempts:0,clean:0};data.openingDrills[b.opening]={attempts:old.attempts+1,clean:(old.clean||0)+(ui.openingDrillMistakes===0?1:0),last:now()};save();}
+ if(b.moves.length===b.sequence.length){const old=data.openingDrills[b.scoreKey]||{attempts:0,clean:0};data.openingDrills[b.scoreKey]={attempts:old.attempts+1,clean:(old.clean||0)+(ui.openingDrillMistakes===0?1:0),last:now()};save();}
  render();
 }
 function cpScore(info){if(!info)return null;if(info.scoreType==='cp')return info.score;if(info.scoreType==='mate')return (info.score>0?1:-1)*(10000-Math.min(100,Math.abs(info.score))*10);return null;}
@@ -910,6 +950,7 @@ function playPuzzleMove(q,m,exam){
 }
 function handleMove(m){const b=ui.board;if(!b)return;
  if(ui.page==='workshop')return workshopMove(m);
+ if(b.player)return openingStudyMove(m);
  if(ui.page==='openings'&&b.kind==='opening-drill')return openingDrillMove(m);
  if(ui.page==='journal'){
   const found=data.journal.find(x=>x.id===ui.journalId);if(!found)return;
@@ -931,9 +972,9 @@ function handleMove(m){const b=ui.board;if(!b)return;
  if(ui.page==='analyze'){applyBoardMove(b,m);return;}
  applyBoardMove(b,m);
 }
-function navigateBoardBack(){const b=ui.board;if(!b||b.moves.length===0)return;b.history.pop();b.moves.pop();b.labels.pop();b.last=null;b.selected=-1;b.pending=null;b.guided=b.moves.every((x,i)=>x===b.sequence[i]?.[0]);b.error='';render();}
-function navigateBoardNext(){const b=ui.board;if(!b||b.kind==='question'||!b.guided)return;const item=b.sequence[b.moves.length];if(!item)return;const m=C.fromUci(bs(b),item[0]);if(m)applyBoardMove(b,m);}
-function restartBoard(){const b=ui.board;if(!b)return;ui.board=makeBoard(b.initial,b.sequence,b.kind);ui.board.flip=b.flip;ui.board.opening=b.opening;ui.engineResult=null;render();}
+function navigateBoardBack(){const b=ui.board;if(!b||b.moves.length===0)return;if(b.player){let target=b.moves.length-1;while(target>0&&b.history[target].t!==b.player)target--;return rewindStudy(b,target);}b.history.pop();b.moves.pop();b.labels.pop();b.last=null;b.selected=-1;b.pending=null;b.guided=b.moves.every((x,i)=>x===b.sequence[i]?.[0]);b.error='';render();}
+function navigateBoardNext(){const b=ui.board;if(!b||b.kind==='question'||!b.guided)return;const item=b.sequence[b.moves.length];if(!item)return;const m=C.fromUci(bs(b),item[0]);if(m&&b.player)return openingStudyMove(m);if(m)applyBoardMove(b,m);}
+function restartBoard(){const b=ui.board;if(!b)return;if(b.player)return rewindStudy(b,0);ui.board=makeBoard(b.initial,b.sequence,b.kind);ui.board.flip=b.flip;ui.board.opening=b.opening;ui.engineResult=null;render();}
 function shuffle(items){const out=[...items];for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;}
 function boardOrMCchoice(answer){const e=ui.exam;if(!e||e.answered!==null)return;const q=e.items[e.index];if(q.kind!=='mc')return;submitExam(answer===q.answer);}
 function chooseMC(answer){const q=questions.get(ui.practiceId);if(!q||ui.feedback||q.kind!=='mc')return;solvePractice(Number(answer)===q.answer,q.explanation,ui.usedHint||ui.attemptWrong>0);}
@@ -961,12 +1002,13 @@ function action(name,el){switch(name){
  case'return-lesson-practice':return initLesson(Number(el.dataset.id||questions.get(ui.practiceId)?.lesson),'practice');
  case'practice-filter':ui.filter=el.dataset.filter;return render();
  case'preview-start':case'preview-back':case'preview-next':case'preview-end':case'preview-jump':{const p=ui.preview;if(!p)return;const count=p.moves.length;p.index=name==='preview-start'?0:name==='preview-back'?Math.max(0,p.index-1):name==='preview-next'?Math.min(count,p.index+1):name==='preview-end'?count:Math.max(0,Math.min(count,Number(el.dataset.ply)));return render();}
- case'board-jump':{const target=Number(el.dataset.ply);if(!ui.board||ui.board.kind==='question')return;while(ui.board.moves.length>target){ui.board.history.pop();ui.board.moves.pop();ui.board.labels.pop();}ui.board.last=null;ui.board.selected=-1;ui.board.pending=null;ui.board.guided=ui.board.moves.every((u,i)=>u===ui.board.sequence[i]?.[0]);return render();}
+ case'board-jump':{const target=Number(el.dataset.ply);if(!ui.board||ui.board.kind==='question')return;if(ui.board.player)return rewindStudy(ui.board,target);while(ui.board.moves.length>target){ui.board.history.pop();ui.board.moves.pop();ui.board.labels.pop();}ui.board.last=null;ui.board.selected=-1;ui.board.pending=null;ui.board.guided=ui.board.moves.every((u,i)=>u===ui.board.sequence[i]?.[0]);return render();}
  case'board-back':return navigateBoardBack();case'board-next':return navigateBoardNext();case'board-restart':return restartBoard();case'board-flip':ui.board.flip=!ui.board.flip;return render();
  case'promote':{const m=ui.board?.pending?.find(x=>C.uci(x)===el.dataset.uci);if(m)handleMove(m);return;}
  case'analyze-position':return analysePosition();
  case'opening-chapter':ui.openingBranch=el.dataset.branch==='1';ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
- case'select-opening':ui.openingBranch=false;ui.openingId=el.dataset.opening;ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
+ case'study-side':{const color=el.dataset.side;if(ui.page==='lesson'){ui.lessonColor=color;const b=ui.board;ui.board=makeBoard(b.initial,b.sequence,'lesson');return render();}if(ui.page==='workshop')return startWorkshop('model',ui.work.key,color);ui.openingColor=color;ui.board=null;ui.engineResult=null;if(ui.openingPhase==='drill')return startOpeningDrill();return render();}
+ case'select-opening':ui.openingColor=null;ui.openingBranch=false;ui.openingId=el.dataset.opening;ui.openingPhase='explore';ui.board=null;ui.engineResult=null;return render();
  case'toggle-repertoire':{const id=el.dataset.opening;if(data.repertoire.includes(id))data.repertoire=data.repertoire.filter(x=>x!==id);else data.repertoire.push(id);save();return render();}
  case'start-opening-drill':return startOpeningDrill();
  case'exit-opening-drill':ui.openingPhase='explore';ui.board=null;return render();
