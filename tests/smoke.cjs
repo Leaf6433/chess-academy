@@ -449,3 +449,64 @@ assert(app.innerHTML.includes('translate(5.5 6.5)'));
 press('start-opening-drill');assert(!app.innerHTML.includes('data-arrow='));
 press('work-start',{mode:'mixed',key:''});assert(!app.innerHTML.includes('data-arrow='));
 console.log('PASS: move arrows, Black orientation, drag-to-move and hidden recall solutions');
+
+// Problem boards must accept the same drag gesture as lesson boards.
+function dragMove(uci){
+ const b=t.ui.board;
+ callbacks.pointerdown({target:squareTarget(t.C.index(uci.slice(0,2))),button:0,pointerId:7});
+ document.elementFromPoint=()=>squareTarget(t.C.index(uci.slice(2,4)));
+ callbacks.pointerup({pointerId:7,clientX:1,clientY:1});
+ // Browsers emit a click following the drop; it must not play a second move.
+ callbacks.click({preventDefault(){},target:squareTarget(t.C.index(uci.slice(2,4)))});
+ if(b.pending)press('promote',{uci});
+}
+for(const row of global.ACADEMY_PUZZLES){
+ const [, ...line]=row.moves.split(' ');
+ press('open-question',{qid:row.id});
+ for(let i=0;i<line.length;i+=2)dragMove(line[i]);
+ assert(t.ui.feedbackGood,'Drag solves problem '+row.id);
+}
+// Exercise every multi-move problem in Mixed Review, including retry after a
+// legal wrong move. Old feedback must never prevent a subsequent correct drag.
+for(const row of global.ACADEMY_PUZZLES){
+ press('open-question',{qid:row.id});
+ const q={...row,kind:'board',fen:t.C.toFen(t.ui.board.history[0]),line:row.moves.split(' ').slice(1),explanation:'Review solved.'};
+ t.ui.page='workshop';t.ui.exam=null;
+ t.ui.work={mode:'mixed',key:'',index:0,queue:[q],done:false,missed:false,feedback:''};
+ t.render();
+ const wrong=t.C.legal(t.ui.board.history[0]).find(m=>t.C.uci(m)!==q.line[0]&&!t.C.status([t.C.apply(t.ui.board.history[0],m)]).done);
+ if(wrong){
+  dragMove(t.C.uci(wrong));
+  assert.equal(t.ui.board.moves.length,0,'Wrong drag preserves problem '+q.id);
+  assert(t.ui.work.feedback.includes('position has stayed the same'));
+  assert.equal(t.ui.board.hintFrom,undefined,'First miss does not reveal the piece');
+  dragMove(t.C.uci(wrong));
+  assert.equal(t.ui.board.hintFrom,t.C.index(q.line[0].slice(0,2)),'Second miss highlights the correct piece');
+  assert(app.innerHTML.includes('hint-piece'),'Piece hint is visible');
+  assert(!app.innerHTML.includes('data-arrow='),'Automatic hint does not reveal the destination');
+  press('work-hint');assert(t.ui.work.feedback.includes(q.line[0].slice(0,2)));
+  press('work-retry');assert(t.ui.work.missed,'Restart cannot award clean recall after a hint');
+ }
+ for(let i=0;i<q.line.length;i+=2){
+  assert.equal(t.ui.board.history.at(-1).t,t.ui.board.history[0].t,'Player turn after automatic reply '+q.id);
+  dragMove(q.line[i]);
+ }
+ assert(t.ui.work.done,'Mixed review can finish '+q.id);
+ press('work-next');assert(app.innerHTML.includes('Review complete'));
+}
+console.log('PASS: dragging all 486 problems and mixed-review lines, wrong-move retries, hints, automatic replies and promotions');
+
+// Regular practice also offers a piece hint after two misses on this move.
+const hintRow=global.ACADEMY_PUZZLES.find(row=>row.moves.split(' ').length>=4);
+press('open-question',{qid:hintRow.id});
+const hintLine=hintRow.moves.split(' ').slice(1),hintBoard=t.ui.board;
+const hintWrong=t.C.legal(hintBoard.history[0]).find(m=>t.C.uci(m)!==hintLine[0]&&!t.C.status([t.C.apply(hintBoard.history[0],m)]).done);
+dragMove(t.C.uci(hintWrong));assert.equal(hintBoard.hintFrom,undefined);
+dragMove(t.C.uci(hintWrong));
+assert(t.ui.usedHint&&t.ui.showHint,'Automatic help counts as assisted');
+assert.equal(hintBoard.hintFrom,t.C.index(hintLine[0].slice(0,2)));
+assert(app.innerHTML.includes('Focus on the highlighted'));
+assert(!app.innerHTML.includes('data-arrow='));
+dragMove(hintLine[0]);assert.equal(hintBoard.hintFrom,null,'Hint clears after a correct move');
+assert.equal(hintBoard.hintMisses,0,'Miss count resets for the next player move');
+console.log('PASS: automatic piece hints after two misses, hidden destinations, assistance tracking and clearing hints between moves');

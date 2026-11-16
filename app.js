@@ -213,13 +213,25 @@ function arrowOverlay(b,uci){
  const length=Math.hypot(toX-x,toY-y);
  return `<svg class="move-arrow" viewBox="0 0 8 8" aria-hidden="true" data-arrow="${uci}"><g transform="translate(${x} ${y}) rotate(${angle})"><path d="M .18 0 H ${length-.34}" /><polygon points="${length-.4},-.21 ${length-.04},0 ${length-.4},.21"/></g></svg>`;
 }
+function pieceHint(q,b){
+ const uci=q.line?q.line[b.moves.length]:q.answer,m=C.fromUci(bs(b),uci);
+ if(!m)return q.hint||'Look for checks, captures and threats.';
+ b.hintFrom=m[0];
+ const piece={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'}[bs(b).b[m[0]].toLowerCase()];
+ return 'Focus on the highlighted '+piece+' on '+uci.slice(0,2)+'. Where could it move?';
+}
+function practiceMissHint(){
+ const q=questions.get(ui.practiceId),b=ui.board;
+ b.hintMisses=(b.hintMisses||0)+1;
+ if(b.hintMisses>=2){ui.showHint=true;ui.usedHint=true;if(q.kind==='board')b.hintText=pieceHint(q,b);}
+}
 function boardInner(b,{viewOnly=false}={}){
  const s=bs(b),valid=C.legal(s),sel=valid.filter(m=>m[0]===b.selected).map(m=>m[1]);const rows=[];
  for(let r=0;r<8;r++)for(let f=0;f<8;f++){
   const row=b.flip?7-r:r,file=b.flip?7-f:f,i=row*16+file;
   const p=s.b[i],target=sel.includes(i),selected=b.selected===i,last=b.last?.includes(i);
   const dark=(row+file)%2===1;
-  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':neoPiece((C.side(p)===1?'w':'b')+p.toLowerCase())}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
+  rows.push(`<button ${viewOnly?'disabled':''} class="sq ${dark?'dark':'light'} ${selected?'selected':''} ${!viewOnly&&b.hintFrom===i?'hint-piece':''} ${last?'last':''} ${target?(p!=='.'?'capture':'target'):''}" aria-label="${a(C.sq(i))} ${p==='.'?'empty':p}" data-sq="${i}">${p==='.'?'':neoPiece((C.side(p)===1?'w':'b')+p.toLowerCase())}${(b.flip?row===0:row===7)?`<span class="coord file">${C.sq(i)[0]}</span>`:''}${(b.flip?file===7:file===0)?`<span class="coord rank">${8-row}</span>`:''}</button>`);
  }
  return `<div class="board-frame"><div class="board" role="group" aria-label="Interactive chess board">${rows.join('')}${!viewOnly&&guidedMove(b)?arrowOverlay(b,guidedMove(b)):''}</div></div>`;
 }
@@ -445,7 +457,7 @@ function practiceQuestion(){const q=questions.get(ui.practiceId);if(!q)return pr
  const next=nextRelevantQuestion(q);
  let follow=`<div class="btn-row" style="margin-top:14px">${!ui.feedback?`<button class="btn ghost small" data-action="hint">${ui.showHint?'Hide hint':'Show a hint'}</button>${ui.attemptWrong>=2&&ui.dailyDay==null?`<button class="btn ghost small" data-action="reveal-answer">Show explanation</button>`:''}`:`${next?`<button class="btn" data-action="open-question" data-qid="${a(next.id)}">Next practice position →</button>`:ui.practiceOrigin==='lesson'?`<button class="btn" data-action="start-mastery" data-id="${q.lesson}">Take mastery check →</button>`:`<button class="btn" data-page="practice" data-filter="${a(ui.filter)}">Back to practice →</button>`}`}<button class="btn ghost small" data-action="return-lesson-practice" data-id="${q.lesson}">Lesson practice overview</button></div>`;
  wrap(`${header(ui.dailyDay!=null?'DAILY CHALLENGE':q.opening||'PRACTICE · '+l.title,q.variation||(q.line?'Calculate the continuation':'Apply the idea'),q.line?'Puzzle rating '+q.rating+' · '+Math.min(Math.floor(ui.board.moves.length/2)+1,Math.ceil(q.line.length/2))+' of '+Math.ceil(q.line.length/2)+' player moves':'Try a move, or ask for a hint.')}
- <div class="layout-board"><div>${q.kind==='mc'?conceptOrBoard(q):controls}${q.kind==='board'&&ui.feedbackGood?`<div class="feedback">Your move has been played on the board.</div>`:''}</div><div>${qCard(q)}${q.line&&ui.board.moves.length&&!ui.feedback?`<div class="feedback info" role="status">Played ${a(ui.board.labels.join(' '))}. Your move.</div>`:''}${q.kind==='mc'?controls:''}${ui.showHint&&!ui.feedback?`<div class="feedback gold">Hint: ${a(q.hint)}</div>`:''}${ui.attemptWrong&&!ui.feedback&&!ui.lastPuzzleMoveCorrect?`<div class="feedback bad">Not quite. Recheck the position and try another idea. ${ui.attemptWrong>=2&&ui.dailyDay==null?'You can reveal the answer now.':''}</div>`:''}${ui.feedback?`<div class="feedback ${ui.feedbackGood?'':'gold'}">${a(ui.feedback)}</div>`:''}${follow}</div></div>`,'Practice');
+ <div class="layout-board"><div>${q.kind==='mc'?conceptOrBoard(q):controls}${q.kind==='board'&&ui.feedbackGood?`<div class="feedback">Your move has been played on the board.</div>`:''}</div><div>${qCard(q)}${q.line&&ui.board.moves.length&&!ui.feedback?`<div class="feedback info" role="status">Played ${a(ui.board.labels.join(' '))}. Your move.</div>`:''}${q.kind==='mc'?controls:''}${ui.showHint&&!ui.feedback?`<div class="feedback gold">Hint: ${a(ui.board.hintText||q.hint)}</div>`:''}${ui.attemptWrong&&!ui.feedback&&!ui.lastPuzzleMoveCorrect?`<div class="feedback bad">Not quite. Recheck the position and try another idea. ${ui.attemptWrong>=2&&ui.dailyDay==null?'You can reveal the answer now.':''}</div>`:''}${ui.feedback?`<div class="feedback ${ui.feedbackGood?'':'gold'}">${a(ui.feedback)}</div>`:''}${follow}</div></div>`,'Practice');
 }
 
 function questionPreviewMoves(q){
@@ -487,7 +499,7 @@ function questionReplay(){
 
 function conceptOrBoard(q){if(ui.preview&&q.kind==='mc')return questionReplay();if(ui.preview&&q.kind==='board')return boardHTML(ui.board)+`<details style="margin-top:12px"><summary class="helper" style="cursor:pointer">Replay how this position arose (no answer shown)</summary>${questionReplay()}</details>`;return q.kind==='mc'&&exFen(q)===C.START_FEN?`<div class="concept-card"><div class="concept-glyph">♞</div><div class="eyebrow">CHESS REASONING</div><h3>Think before choosing</h3><p class="helper">Apply what you learned. The question, not an unrelated board, is your focus here.</p></div>`:boardHTML(ui.board);}
 function schedule(qid,correct,hinted=false){const prior=data.review[qid]||{streak:0,interval:1};const streak=(correct&&!hinted)?prior.streak+1:0;const intervals=[1,1,3,7,14,30,60];const days=intervals[Math.min(streak,intervals.length-1)];data.review[qid]={streak,interval:days,due:now()+days*86400000,seen:(prior.seen||0)+1};save();}
-function solvePractice(good,explanation,assisted=false){const id=ui.practiceId;if(good){ui.feedback=explanation;ui.feedbackGood=!assisted;data.practiceSolved[id]={at:now(),assisted:!!assisted};const lesson=lessons.get(questions.get(id)?.lesson);if(lesson&&lessonExercises(lesson).every(e=>data.practiceSolved[e.id]))data.completed[lesson.id]={at:now()};schedule(id,!assisted,assisted);}else{ui.attemptWrong++;schedule(id,false);save();}render();}
+function solvePractice(good,explanation,assisted=false){const id=ui.practiceId;if(good){ui.feedback=explanation;ui.feedbackGood=!assisted;data.practiceSolved[id]={at:now(),assisted:!!assisted};const lesson=lessons.get(questions.get(id)?.lesson);if(lesson&&lessonExercises(lesson).every(e=>data.practiceSolved[e.id]))data.completed[lesson.id]={at:now()};schedule(id,!assisted,assisted);}else{ui.attemptWrong++;practiceMissHint();schedule(id,false);save();}render();}
 function startAssessment(kind,id=null){
  let items;
  if(kind==='placement'){
@@ -655,7 +667,7 @@ function workshopPage(){
  ${w.mode==='model'&&ply?`<div class="feedback info">${studyRound(b)}</div>`:''}
  ${w.feedback?`<p class="feedback info" role="status">${a(w.feedback)}</p>`:''}
  ${b.labels.length?`<p class="helper">Played: ${a(b.labels.join(' '))}</p>`:''}
- <div class="btn-row">${button}${w.mode==='model'&&model.stops[ply]&&!guidedMove(b)?'<button class="btn secondary" data-action="work-arrow">Show a move arrow</button>':''}<button class="btn ghost small" data-page="practice">Back to practice</button></div>${w.key==='opera'?'<p class="helper"><a href="https://www.chessranger.com/learn/games/morphy-opera-game" target="_blank" rel="noopener">Historical game score ↗</a></p>':''}</div></div>`,'Board workshop');
+ <div class="btn-row">${button}${w.mode==='mixed'&&!w.done?'<button class="btn secondary" data-action="work-hint">Show hint</button><button class="btn ghost small" data-action="work-retry">Restart position</button>':''}${w.mode==='model'&&model.stops[ply]&&!guidedMove(b)?'<button class="btn secondary" data-action="work-arrow">Show a move arrow</button>':''}<button class="btn ghost small" data-page="practice">Back to practice</button></div>${w.key==='opera'?'<p class="helper"><a href="https://www.chessranger.com/learn/games/morphy-opera-game" target="_blank" rel="noopener">Historical game score ↗</a></p>':''}</div></div>`,'Board workshop');
 }
 function advanceButton(label){return `<button class="btn" data-action="work-next">${label} →</button>`;}
 function workshopNext(){
@@ -682,7 +694,11 @@ function workshopMove(m){
  const san=C.san(bs(b),m);
  const next=C.apply(bs(b),m),alternativeMate=q?.line&&C.checked(next)&&!C.legal(next).length;
  if(C.uci(m)!==expected&&!alternativeMate){
-  b.selected=-1;b.pending=null;w.missed=true;w.showArrow=true;w.feedback=san+' is legal. '+(w.mode==='model'?'Look again at the plan, or follow the move arrow.':w.mode==='pair'?'Look at the squares named in the prompt.':'Look for your opponent’s reply and try another move.');return render();
+  b.selected=-1;b.pending=null;w.missed=true;w.showArrow=true;w.feedback=san+' is legal. '+(w.mode==='model'?'Look again at the plan, or follow the move arrow.':w.mode==='pair'?'Look at the squares named in the prompt.':'That is not the saved solution. The position has stayed the same; try another move, or use Show hint. You can drag a piece or click it and its destination.');if(w.mode==='mixed'){
+   b.hintMisses=(b.hintMisses||0)+1;
+   if(b.hintMisses>=2)w.feedback+=' Hint: '+pieceHint(q,b);
+  }
+  return render();
  }
  applyBoardMove(b,m,false);
  if(w.mode==='model'){
@@ -928,7 +944,7 @@ function chooseSquare(i){const b=ui.board;if(!b)return;if(b.kind==='opening-dril
  if(choices.length>1){b.pending=choices;return render();}
  b.error='Select a piece and then a highlighted legal square.';render();
 }
-function applyBoardMove(b,m,rerender=true){const s=bs(b);const san=C.label(s,m);b.history.push(C.apply(s,m));b.moves.push(C.uci(m));b.labels.push(san);b.last=[m[0],m[1]];b.selected=-1;b.pending=null;b.error='';b.guided=b.sequence.every((x,i)=>!b.moves[i]||b.moves[i]===x[0]);if(rerender)render();}
+function applyBoardMove(b,m,rerender=true){const s=bs(b);const san=C.label(s,m);b.history.push(C.apply(s,m));b.moves.push(C.uci(m));b.labels.push(san);b.last=[m[0],m[1]];b.selected=-1;b.pending=null;b.error='';b.hintFrom=null;b.hintText='';b.hintMisses=0;b.guided=b.sequence.every((x,i)=>!b.moves[i]||b.moves[i]===x[0]);if(rerender)render();}
 function playPuzzleMove(q,m,exam){
  const b=ui.board,expected=q.line[b.moves.length],next=C.apply(bs(b),m);
  const mate=C.checked(next)&&!C.legal(next).length;
@@ -987,6 +1003,8 @@ function action(name,el){switch(name){
  case'work-start':return startWorkshop(el.dataset.mode,el.dataset.key);
  case'work-arrow':ui.work.showArrow=true;return render();
  case'work-next':return workshopNext();
+ case'work-hint':{const w=ui.work;if(w?.mode!=='mixed'||w.done)return;const q=w.queue[w.index];w.missed=true;w.feedback=pieceHint(q,ui.board);return render();}
+ case'work-retry':{const w=ui.work;if(w?.mode!=='mixed'||w.done)return;const missed=w.missed;setReviewBoard();w.missed=missed;return render();}
  case'menu':ui.menu=!ui.menu;return render();case'close-menu':ui.menu=false;return render();case'dismiss':ui.notice='';return render();
  case'start-placement':return startAssessment('placement');
  case'select-lesson-scene':return loadLessonScene(Number(el.dataset.scene));
@@ -1035,7 +1053,7 @@ let studyDrag=null,suppressDropClick=false;
 document.addEventListener('pointerdown',e=>{
  suppressDropClick=false;studyDrag=null;
  const square=e.target.closest?.('[data-sq]'),b=ui.board;
- if(!square||square.disabled||!b||e.button!==0||!['lesson','opening','workshop'].includes(b.kind))return;
+ if(!square||square.disabled||!b||e.button!==0||!['lesson','opening','workshop','question','play','analysis'].includes(b.kind))return;
  const from=Number(square.dataset.sq);
  if(C.side(bs(b).b[from])===bs(b).t)studyDrag={id:e.pointerId,b,from};
 });
