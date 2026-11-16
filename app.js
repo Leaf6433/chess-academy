@@ -193,6 +193,7 @@ let evalTimer=null,evalWorking=false;
 function evalAllowed(b){
  return !!b&&((ui.page==='lesson'&&ui.phase==='read'&&b.kind==='lesson')||
   (ui.page==='analyze'&&!!ui.game&&b.kind==='analysis')||
+  (ui.page==='play'&&b.kind==='play')||
   (ui.page==='openings'&&ui.openingPhase==='explore'&&b.kind==='opening'));
 }
 function guidedMove(b){
@@ -280,10 +281,10 @@ function scheduleEvaluation(){
  if(evaluationCache.has(fen)){paintEvaluation(fen);return;}
  if(evalWorking)return;
  evalTimer=setTimeout(async()=>{
-  if(evalWorking||!evalAllowed(ui.board)||C.toFen(bs(ui.board))!==fen||ui.gameReviewBusy||ui.engineBusy)return;
+  if(evalWorking||!evalAllowed(ui.board)||C.toFen(bs(ui.board))!==fen||ui.gameReviewBusy||ui.engineBusy||ui.playing)return;
   evalWorking=true;
   try{
-   await engine.start(data.settings.mode);
+   await engine.start(ui.page==='play'?'lite':data.settings.mode);
    const result=await engine.analyze(fen,{depth:Math.min(10,data.settings.depth||10),movetime:260});
    recordEvaluation(fen,result);
    paintEvaluation(fen);

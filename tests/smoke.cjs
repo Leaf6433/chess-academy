@@ -335,6 +335,7 @@ assert(local.indexOf('id="engine-response"')<local.indexOf('IMPORTED GAME'),'Gam
 press('game-ply',{ply:'1'});
 assert(!app.innerHTML.includes('id="engine-response"'),'Changing PGN ply clears the result');
 nav('play');
+assert(app.innerHTML.includes('class="eval-rail"'),'Bot games display evaluation beside the board');
 local=showLocalStockfish();
 assert(local.indexOf('id="engine-response"')>local.indexOf('Analyze position'),'Play result appears under board actions');
 assert(local.indexOf('id="engine-response"')<local.indexOf('ENGINE OPPONENT'),'Play result is not appended below the whole screen');
