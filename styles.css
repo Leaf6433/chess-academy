@@ -375,3 +375,11 @@ h1,h2,h3{letter-spacing:-.45px}
 
 .board .sq.hint-piece{box-shadow:inset 0 0 0 4px #f4cf67;background-image:radial-gradient(circle,rgba(244,207,103,.4),transparent 75%)}
 .board .sq.hint-piece:after{content:'★';position:absolute;right:4%;top:0;color:#f4cf67;font-size:clamp(12px,2vw,20px);text-shadow:0 1px 2px #15271c;pointer-events:none}
+
+/* Keep logical pieces accessible while an overlay plays each move in order. */
+.board{position:relative}
+.board.motion-playing>.sq>.neo-piece-wrap{visibility:hidden}
+.piece-motion-layer{position:absolute;inset:0;z-index:8;pointer-events:none}
+.motion-piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;will-change:transform}
+.motion-piece .neo-piece-wrap{visibility:visible}
+@media(prefers-reduced-motion:reduce){.piece-motion-layer{display:none}.board.motion-playing>.sq>.neo-piece-wrap{visibility:visible}}

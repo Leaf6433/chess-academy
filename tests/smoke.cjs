@@ -510,3 +510,4 @@ assert(!app.innerHTML.includes('data-arrow='));
 dragMove(hintLine[0]);assert.equal(hintBoard.hintFrom,null,'Hint clears after a correct move');
 assert.equal(hintBoard.hintMisses,0,'Miss count resets for the next player move');
 console.log('PASS: automatic piece hints after two misses, hidden destinations, assistance tracking and clearing hints between moves');
+require('./piece-motion.cjs');
