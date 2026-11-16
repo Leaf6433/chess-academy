@@ -383,3 +383,10 @@ h1,h2,h3{letter-spacing:-.45px}
 .motion-piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;will-change:transform}
 .motion-piece .neo-piece-wrap{visibility:visible}
 @media(prefers-reduced-motion:reduce){.piece-motion-layer{display:none}.board.motion-playing>.sq>.neo-piece-wrap{visibility:visible}}
+
+/* One activity at a time, with explicit learner-controlled progression. */
+.lesson-part-list{display:flex;flex-wrap:wrap;gap:8px;order:-1}
+.lesson-part-next{display:flex;flex-direction:column;gap:16px;margin:0}
+.lesson-part-next p{margin:0;line-height:1.6}
+.lesson-part-next button{min-height:44px;white-space:normal;text-align:left}
+@media(max-width:600px){.lesson-part-next .btn-row{align-items:stretch;flex-direction:column}.lesson-part-list .chip{font-size:11px}}

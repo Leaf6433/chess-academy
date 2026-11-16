@@ -40,28 +40,35 @@ nav('curriculum');
 nav('lesson',1);assert.equal(t.ui.page,'lesson');
 assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Lesson teaching uses a full-width reading layout');
 assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Core introduction occupies a full-width panel');
-assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Detailed lesson is not crammed alongside the chessboard');
-assert(app.innerHTML.indexOf('class="lesson-workshop-layout"') < app.innerHTML.indexOf('class="panel lesson-reading-panel lesson-theory"'),'The detailed lesson appears as a separate full-width section beneath the board');
-
-assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Every lesson must display expanded teaching');
-assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Lesson reading must expose two examples');
-assert(app.innerHTML.includes('Think it through'),'Every lesson must have recall prompts');
-press('select-lesson-scene',{scene:'1'});
-assert.equal(t.ui.lessonScene,1,'Second example selected');
-assert(app.innerHTML.includes('Save the rook'),'Alternate scene visible');
-press('board-next');assert.equal(t.ui.board.moves.length,1,'Alternate example replays legally');
-press('select-lesson-scene',{scene:'0'});
-assert.equal(t.ui.lessonScene,0,'Return to original model');
-
-assert(app.innerHTML.includes('class="eval-rail"'),'Lesson reading has an evaluation rail');
-assert(app.innerHTML.includes('Stockfish analyzing'),'Loading indicator does not claim position is equal');
-assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'),'Lesson 1 introduces relevant vocabulary');assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
-assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'),'Official Neo white king image must render');
-assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/bk.png'),'Official Neo black king image must render');
-assert(app.innerHTML.includes('neo-piece-image'),'All chess piece images use Neo renderer');
-assert(app.innerHTML.includes('neo-piece-fallback'),'Offline fallback still exists for failed image requests');
-assert(app.innerHTML.includes('quick guide'),'Each lesson has a notation guide');
-assert(app.innerHTML.includes('Practice these positions'),'Every lesson offers a guided practice step');
+assert(!app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Only current activity is visible');
+assert(app.innerHTML.includes('ACTIVITY 1 OF 5'));
+press('lesson-part-next');
+assert.equal(t.ui.lessonPart,1);
+assert(app.innerHTML.includes('IN-DEPTH STUDY'));
+assert(app.innerHTML.includes('Think it through'));
+assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'));
+press('lesson-part-next');
+assert.equal(t.ui.lessonPart,2);
+assert.equal(t.ui.lessonScene,0);
+assert(app.innerHTML.includes('class="eval-rail"'));
+assert(app.innerHTML.includes('Stockfish analyzing'));
+assert(app.innerHTML.includes('assets/pieces.svg#wK'));assert(app.innerHTML.includes('assets/pieces.svg#bK'));
+assert(app.innerHTML.includes('https://assets-themes.chess.com/image/ejgfv/150/wk.png'));
+assert(app.innerHTML.includes('neo-piece-image'));
+assert(app.innerHTML.includes('neo-piece-fallback'));
+press('lesson-part-next');assert.equal(t.ui.lessonPart,2,'Cannot skip unfinished board');
+while(t.ui.board.moves.length<t.ui.board.sequence.length)press('board-next');
+press('lesson-part-next');assert.equal(t.ui.lessonPart,3);
+assert.equal(t.ui.lessonScene,1);
+assert(app.innerHTML.includes('Save the rook'));
+while(t.ui.board.moves.length<t.ui.board.sequence.length)press('board-next');
+press('lesson-part-next');assert.equal(t.ui.lessonPart,4);
+assert(app.innerHTML.includes('quick guide'));
+assert(app.innerHTML.includes('Practice these positions'));
+press('lesson-part-back');assert.equal(t.ui.lessonPart,3,'Previous returns to second board');
+while(t.ui.board.moves.length<t.ui.board.sequence.length)press('board-next');
+press('lesson-part-next');
+press('lesson-part-next');assert.equal(t.ui.phase,'practice','Recap continues to practice');
 press('lesson-phase',{phase:'practice'});
 assert(app.innerHTML.includes('YOUR PRACTICE PLAN'));
 const firstLessonQuestion=t.D.lessons.find(x=>x.id===1).exercises[0];
@@ -186,7 +193,7 @@ nav('lesson',2);assert.equal(t.data.studied[2],undefined,'Opening a lesson alone
 press('lesson-phase',{phase:'practice'});assert(t.data.studied[2],'Entering practice marks study');
 
 // Chess vocabulary and placement diagnostics should teach, not rely on unexplained jargon.
-t.ui.page='lesson';t.ui.id=15;t.ui.phase='read';t.render();
+t.ui.page='lesson';t.ui.id=15;t.ui.phase='read';t.ui.lessonPart=1;t.render();
 assert(app.innerHTML.includes('CHESS WORDS IN THIS LESSON'));
 assert(app.innerHTML.includes('Opposition'));
 assert(app.innerHTML.includes('with exactly one empty square between them'));
@@ -252,7 +259,8 @@ for(let id=1;id<=40;id++){
  assert(t.C.fromUci(t.C.parseFen(t.exFen(board)),board.answer),'Legal mastery move '+id);
  for(const q of quest){assert.equal(q.kind,'mc');assert.equal(q.options.length,4);assert(q.answer>=0&&q.answer<4);}
  // The user must be able to open the independent test, answer it and see a score.
- nav('lesson',id);assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ nav('lesson',id);press('lesson-part-next');assert(app.innerHTML.includes('IN-DEPTH STUDY'),'Detailed reading for lesson '+id);
+ press('lesson-part-next');
  assert.equal(t.ui.board.sequence.length,core.line.length,'Core model loads all demonstration moves '+id);
  assert(!app.innerHTML.includes('Guided line complete.'),'Core model is not already complete on opening '+id);
  press('board-next');
@@ -268,12 +276,8 @@ for(let id=1;id<=40;id++){
  assert.equal(t.ui.board.moves.length,t.ui.board.player===-1?1:0,'Switching back to core resets position '+id);
 
  assert(app.innerHTML.includes('class="lesson-reading-layout"'),'Full-width lesson layout '+id);
- assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-intro"'),'Spacious core teaching '+id);
- assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'Spacious in-depth teaching '+id);
- assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-wrapup"'),'Full-width summary '+id);
-
- assert(app.innerHTML.includes('Common mistake to avoid'),'Lesson-specific mistake guidance visible '+id);
- assert(app.innerHTML.includes('BOARD WALKTHROUGHS'),'Two examples for lesson '+id);
+ assert(app.innerHTML.includes('class="panel lesson-reading-panel lesson-workshop"'),'Spacious board teaching '+id);
+ assert(!app.innerHTML.includes('class="panel lesson-reading-panel lesson-theory"'),'One activity visible '+id);
  press('start-mastery');
  assert.equal(t.ui.exam.items.length,5,'Five new assessment questions for lesson '+id);
  assert.equal(t.ui.exam.items.filter(q=>q.kind==='board').length,3,'Mastery prioritizes 3 board moves for lesson '+id);
@@ -303,11 +307,11 @@ function showLocalStockfish(){
  assert(app.innerHTML.includes('class="panel stockfish-inline"'),'Stockfish uses its compact board-attached panel');
  return app.innerHTML;
 }
-nav('lesson',1);
+nav('lesson',1);press('lesson-part-next');press('lesson-part-next');
 let local=showLocalStockfish();
 assert(local.indexOf('id="engine-response"')>local.indexOf('class="lesson-workshop-board"'),'Lesson result is inside board workshop');
 assert(local.indexOf('id="engine-response"')<local.indexOf('class="lesson-workshop-guide"'),'Lesson result appears before adjacent guidance, not beneath the full lesson');
-assert(local.indexOf('id="engine-response"')<local.indexOf('class="panel lesson-reading-panel lesson-theory"'),'Lesson result is before deep reading');
+assert(!local.includes('class="panel lesson-reading-panel lesson-theory"'),'Deep reading is in its own activity');
 press('board-next');
 assert(!app.innerHTML.includes('id="engine-response"'),'Old Stockfish result disappears after a move');
 t.ui.engineResult=null;
@@ -510,6 +514,20 @@ assert(!app.innerHTML.includes('data-arrow='));
 dragMove(hintLine[0]);assert.equal(hintBoard.hintFrom,null,'Hint clears after a correct move');
 assert.equal(hintBoard.hintMisses,0,'Miss count resets for the next player move');
 console.log('PASS: automatic piece hints after two misses, hidden destinations, assistance tracking and clearing hints between moves');
+// Every lesson can reach practice through each activity and both completed board lines.
+for(const lesson of t.D.lessons){
+ nav('lesson',lesson.id);
+ press('lesson-part-next');press('lesson-part-next');
+ for(let scene=0;scene<2;scene++){
+  const board=t.ui.board;
+  for(let guard=0;board.moves.length<board.sequence.length&&guard<100;guard++)press('board-next');
+  assert.equal(board.moves.length,board.sequence.length,'Walkthrough completes for lesson '+lesson.id);
+  press('lesson-part-next');
+ }
+ assert(app.innerHTML.includes('Remember these ideas'),'Lesson recap reached '+lesson.id);
+ press('lesson-part-next');assert.equal(t.ui.phase,'practice');
+}
+
 require('./piece-motion.cjs');
 
 require('./bot-opponents.cjs');

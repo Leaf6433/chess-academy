@@ -308,7 +308,7 @@ function boardControls(b,{engineAction=false}={}){if(!b)return '';
 }
 function initLesson(id,phase='read'){
  const l=lessons.get(Number(id));if(!l)return;
- ui.lessonColor=null;ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
+ ui.lessonPart=0;ui.lessonPartsDone={};ui.lessonColor=null;ui.id=l.id;ui.phase=phase;ui.lessonScene=0;ui.practiceId=null;ui.exam=null;ui.board=makeBoard(typeof l.fen==='string'?l.fen:exFen(l),l.line,'lesson');data.lastLesson=l.id;data.opened[l.id]=now();save();ui.page='lesson';render();
 }
 const VOCABULARY=[
  ['opposition','When two kings face each other on the same row or column with exactly one empty square between them. The king forced to move first may need to step aside.'],
@@ -372,6 +372,26 @@ function loadLessonScene(index){
  ui.board=makeBoard(exFen(choice),choice.line,'lesson');ui.board.flip=flip;
  ui.engineResult=null;render();
 }
+function lessonParts(l){return ['Core ideas','Detailed teaching','Core board example',...(lessonScenes.has(l.id)?['Second board example']:[]),'Recap'];}
+function lessonPartReady(){
+ const part=ui.lessonPart||0,b=ui.board;
+ return part!==2&&!(part===3&&lessonScenes.has(ui.id))||!!b&&b.moves.length>=b.sequence.length&&b.moves.slice(0,b.sequence.length).every((m,i)=>m===b.sequence[i][0]);
+}
+function changeLessonPart(delta){
+ const l=lessons.get(ui.id),part=ui.lessonPart||0;
+ if(ui.phase!=='read'||delta>0&&!lessonPartReady())return;
+ if(delta>0)ui.lessonPartsDone[part]=true;
+ const target=part+delta;
+ if(target>=lessonParts(l).length)return action('lesson-phase',{dataset:{phase:'practice'}});
+ ui.lessonPart=Math.max(0,target);
+ if(ui.lessonPart===2||ui.lessonPart===3&&lessonScenes.has(l.id))loadLessonScene(ui.lessonPart===2?0:1);
+ else render();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function lessonPartNavigation(l){
+ const parts=lessonParts(l),part=ui.lessonPart||0,ready=lessonPartReady();
+ return `<nav class="lesson-part-list" aria-label="Lesson activities">${parts.map((name,i)=>`<span class="chip ${i===part?'gold':ui.lessonPartsDone?.[i]?'':'grey'}" ${i===part?'aria-current="step"':''}>${ui.lessonPartsDone?.[i]?'✓':i+1} · ${a(name)}</span>`).join('')}</nav><div class="lesson-part-next panel"><p role="status">${ready?(part===parts.length-1?'Study complete. Put these ideas into practice.':'Ready when you are. Continue to the next activity. '):'Complete the guided line on this board to unlock the next activity.'}</p><div class="btn-row">${part>0?'<button class="btn secondary" data-action="lesson-part-back">← Previous part</button>':''}<button class="btn" data-action="lesson-part-next" ${ready?'':'disabled'}>${part===parts.length-1?'Next: guided practice':'Next: '+a(parts[part+1])} →</button></div></div>`;
+}
 function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=lessonOrder.indexOf(l.id),done=!!data.mastered[l.id];let qCount=lessonExercises(l).length;
  if(l.module===3&&ui.board?.kind==='lesson'&&!ui.board.player){
   const color=ui.lessonColor||([10,11,12,29,30].includes(l.id)?'Black':'White');
@@ -382,17 +402,18 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
  if(ui.phase==='mastery'&&ui.exam)return wrap(assessmentPage(top),'Lesson mastery assessment');
  if(ui.phase==='read'){
   const scene=lessonScenes.get(l.id);
-  const body=`<div class="lesson-reading-layout">${workshopLinks(l.id)}
+  const part=ui.lessonPart||0;
+  const body=`<div class="lesson-reading-layout"><div class="eyebrow">ACTIVITY ${part+1} OF ${lessonParts(l).length} · ${a(lessonParts(l)[part])}</div>
    <div class="lesson-time-plan"><strong>Suggested 25-minute study route</strong><span>Core ideas · 5 min</span><span>Detailed topics · 9 min</span><span>Two boards · 6 min</span><span>Recall and practice · 5 min</span></div>
-   <section class="panel lesson-reading-panel lesson-intro" aria-label="Lesson introduction">
+   ${part===0?`<section class="panel lesson-reading-panel lesson-intro" aria-label="Lesson introduction">
     <div class="eyebrow">LEARN · CORE CONCEPTS</div>
     <h2>The key idea</h2>
     <div class="lesson-notes">${l.body.map(p=>`<p>${a(p)}</p>`).join('')}</div>
-   </section>
-   <section class="panel lesson-reading-panel lesson-workshop" aria-label="Interactive chess walkthroughs">
+   </section>`:''}
+   ${part===2||part===3&&scene?`<section class="panel lesson-reading-panel lesson-workshop" aria-label="Interactive chess walkthroughs">
     <div class="lesson-section-head"><span class="eyebrow">PRACTICE THE IDEA</span><h2>See it on the board</h2><p class="helper">Study each position, predict the next move, and use the board controls to see why it works.</p></div>
     <div class="lesson-workshop-layout">
-     <div class="lesson-workshop-board">${lessonSceneOptions(l)}${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div>
+     <div class="lesson-workshop-board"><p class="helper">${ui.lessonScene===1&&scene?a(scene.question):'Follow the main example and read each move explanation.'}</p>${boardHTML(ui.board)}${boardControls(ui.board,{engineAction:true})}${engineResponse()}</div>
      <div class="lesson-workshop-guide">
       <h3>${ui.lessonScene===1&&scene?a(scene.title):'Follow the main example'}</h3>
       <p class="helper">${ui.lessonScene===1&&scene?a(scene.question):'Before each move, identify the opponent’s threat and try to predict the next move. Then check the explanation in the move list.'}</p>
@@ -403,19 +424,21 @@ function lessonPage(){let l=lessons.get(ui.id),mod=D.modules[l.module],index=les
      </div>
     </div>
    </section>
-   <section class="panel lesson-reading-panel lesson-theory" aria-label="In-depth teaching">
+   `:''}
+   ${part===1?`<section class="panel lesson-reading-panel lesson-theory" aria-label="In-depth teaching">
      ${deepLessonContent(l)}
      ${lessonVocabulary(l)}
    </section>
-   <section class="panel lesson-reading-panel lesson-wrapup" aria-label="Lesson summary and next steps">
+   `:''}
+   ${part===lessonParts(l).length-1?`<section class="panel lesson-reading-panel lesson-wrapup" aria-label="Lesson summary and next steps">
      <div class="eyebrow">PUT IT TOGETHER</div>
      <h2>Remember these ideas</h2>
      <div class="checklist lesson-takeaways">${l.takeaways.map(t=>`<div class="check"><span class="checkmark">✓</span><span>${a(t)}</span></div>`).join('')}</div>
      <details class="notation-help"><summary>New to chess notation? See a quick guide</summary><div class="helper"><strong>Piece letters:</strong> K = king, Q = queen, R = rook, B = bishop, N = knight. Pawns use their destination square (like e4). <strong>x</strong> means capture, <strong>+</strong> check, <strong>#</strong> checkmate, and <strong>O-O</strong> kingside castling. Select Next move on the board to see how each move works.</div></details>
      <div class="lesson-coach"><div class="eyebrow">NEXT STEP · APPLY IT</div><p class="helper" style="margin:9px 0 12px">Knowing the idea is the start. Work through the guided practice for this lesson, then prove it with an unassisted mastery check.</p><button class="btn" data-action="lesson-phase" data-phase="practice">Practice these positions →</button></div>
      <div class="lesson-references"><div class="section-label">THEORY &amp; FURTHER READING</div>${l.refs.map(ref=>{const s=D.sources.find(x=>x.id===ref);return s?`<div style="margin-bottom:7px"><a class="source-link" target="_blank" rel="noopener noreferrer" href="${a(s.url)}">${a(s.title)} ↗</a></div>`:''}).join('')}<div style="margin-top:9px"><a class="source-link" href="https://lichess.org/training/themes" target="_blank" rel="noopener noreferrer">Lichess tactical themes ↗</a></div></div>
-   </section>
-  </div>`;
+   </section>${workshopLinks(l.id)}
+  `:''}${lessonPartNavigation(l)}</div>`;
   return wrap(top+body,'Lesson');
  }
  if(ui.phase==='practice'){
@@ -1022,7 +1045,9 @@ function action(name,el){switch(name){
  case'menu':ui.menu=!ui.menu;return render();case'close-menu':ui.menu=false;return render();case'dismiss':ui.notice='';return render();
  case'start-placement':return startAssessment('placement');
  case'select-lesson-scene':return loadLessonScene(Number(el.dataset.scene));
- case'lesson-phase':ui.lessonScene=0;ui.phase=el.dataset.phase;if(ui.phase==='practice'){data.studied[ui.id]=data.studied[ui.id]||now();save();}ui.board=makeBoard(lessons.get(ui.id).fen,lessons.get(ui.id).line,'lesson');return render();
+ case'lesson-part-next':return changeLessonPart(1);
+ case'lesson-part-back':return changeLessonPart(-1);
+ case'lesson-phase':ui.lessonPart=0;ui.lessonScene=0;ui.phase=el.dataset.phase;if(ui.phase==='practice'){data.studied[ui.id]=data.studied[ui.id]||now();save();}ui.board=makeBoard(lessons.get(ui.id).fen,lessons.get(ui.id).line,'lesson');return render();
  case'start-mastery':return startAssessment('mastery',Number(el.dataset.id||ui.id));
  case'exam-choice':return boardOrMCchoice(Number(el.dataset.choice));case'exam-next':return nextExam();
  case'start-daily':return openPractice(dailyPool[localDay()%dailyPool.length].id,'daily');
