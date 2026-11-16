@@ -163,7 +163,7 @@
     pending=setTimeout(autosave,1300);
   }
   root.addEventListener?.('online',()=>{if(state.selected)changed();});
-  const api={state,init,signIn,signUp,signOut,resetPassword,updatePassword,useCloud,uploadDevice,changed,email};
+  const api={getClient:()=>client,state,init,signIn,signUp,signOut,resetPassword,updatePassword,useCloud,uploadDevice,changed,email};
   root.ChessAcademyAccounts=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

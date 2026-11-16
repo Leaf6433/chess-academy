@@ -13,7 +13,7 @@ global.document={getElementById(id){return elements.get(id)||null;},addEventList
 global.scrollTo=()=>{};
 require('../chess-engine.js');require('../course-data-v2.js');require('../foundation-drills.js');require('../board-drills.js');require('../mastery-positions.js');require('../mastery-concepts.js');require('../lesson-deep-dives.js');require('../lesson-scenes.js');
 global.EngineService=class {constructor(){this.mode='lite';this.ready=true;this.onState=()=>{}}start(){return Promise.resolve()}getStatus(){return {mode:'lite',ready:true,loading:false,canFull:false,error:''}}stop(){}analyze(fen){return Promise.resolve({bestmove:'e2e4',scoreType:'cp',score:0,depth:5,pv:['e2e4'],mode:'lite'})}bestmove(){return Promise.resolve('e7e5')}};
-require('../board-workshops.js');require('../opening-study.js');require('../puzzle-bank.js');require('../bot-opponents.js');require('../app.js');
+require('../board-workshops.js');require('../opening-study.js');require('../puzzle-bank.js');require('../bot-opponents.js');require('../bug-reports.js');require('../app.js');
 const t=global.__CHESS_ACADEMY_TEST__;
 function press(action,props={}) {callbacks.click({preventDefault(){},target:{closest(sel){if(sel==='[data-sq]')return null;return {dataset:{action,...props}};}}});}
 function nav(page,id=null){t.nav(page,id);}
@@ -529,7 +529,10 @@ for(const lesson of t.D.lessons){
  press('lesson-part-next');assert.equal(t.ui.phase,'practice');
 }
 
+nav('bugs');assert(app.innerHTML.includes('Sign in to report a bug'));assert(app.innerHTML.includes('bug-screenshot'));assert(app.innerHTML.includes('no AI automatically changes the site'));
 require('./piece-motion.cjs');
 
 require('./bot-opponents.cjs');
 require('./bot-game.cjs');
+
+require('./bug-reports.cjs');
