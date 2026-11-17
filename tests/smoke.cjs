@@ -534,7 +534,7 @@ nav('play');assert(app.innerHTML.includes('Special challenges'),'Challenge oppon
 callbacks.change({target:{id:'difficulty',value:'levy-rook'}});
 assert(app.innerHTML.includes('Unofficial fan-made rook challenge'));
 assert(app.innerHTML.includes('Mission: set up a rook sacrifice'));
-press('new-computer-game');assert.equal(t.ui.board.botMemory,undefined,'New game resets sacrifice objective');
+press('new-computer-game');assert.equal(t.ui.board.botMemory,undefined,'New game resets sacrifice objective');nav('dashboard');
 require('./piece-motion.cjs');
 
 require('./bot-opponents.cjs');
