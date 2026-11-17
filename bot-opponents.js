@@ -40,7 +40,7 @@ function candidate(C,state,level,rng=Math.random){
  return C.uci(pool[Math.min(pool.length-1,Math.floor(rng()*pool.length))]);
 }
 
-const specials=[{id:'levy-rook',name:'Levy-inspired',depth:12,mistakes:0,description:'Unofficial fan-made rook challenge. Plays strongly, seeks a rook sacrifice every game, and becomes willing to sacrifice material after move 12. You can decline the offer; a short game may end before one is possible.'}];
+const specials=[{id:'levy-rook',name:'Levy',depth:12,mistakes:0,description:'Unofficial fan-made rook challenge. Plays strongly, seeks a rook sacrifice every game, and becomes willing to sacrifice material after move 12. You can decline the offer; a short game may end before one is possible.'}];
 function rookOffers(C,state){
  return C.legal(state).filter(move=>{
   if(state.b[move[0]].toLowerCase()!=='r'||values[state.b[move[1]].toLowerCase()]>=500)return false;
