@@ -533,6 +533,8 @@ nav('bugs');assert(app.innerHTML.includes('Sign in to report a bug'));assert(app
 nav('play');assert(app.innerHTML.includes('Special challenges'),'Challenge opponent is separate from rated levels');
 callbacks.change({target:{id:'difficulty',value:'levy-rook'}});
 assert(app.innerHTML.includes('Unofficial fan-made rook challenge'));
+assert(/<option value="levy-rook"[^>]*>Levy<\/option>/.test(app.innerHTML),'Special opponent label is exactly Levy');
+assert(!app.innerHTML.includes('Levy · Rook sacrifice'),'No verbose suffix in opponent label');
 assert(app.innerHTML.includes('Mission: set up a rook sacrifice'));
 press('new-computer-game');assert.equal(t.ui.board.botMemory,undefined,'New game resets sacrifice objective');nav('dashboard');
 require('./piece-motion.cjs');
