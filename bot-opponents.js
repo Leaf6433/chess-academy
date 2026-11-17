@@ -39,10 +39,64 @@ function candidate(C,state,level,rng=Math.random){
  if(rng()<.4){const ranked=legal.map(move=>({move,score:looseScore(C,state,move)})).sort((a,b)=>a.score-b.score);pool=ranked.slice(0,Math.max(1,Math.ceil(ranked.length*.4))).map(x=>x.move);}
  return C.uci(pool[Math.min(pool.length-1,Math.floor(rng()*pool.length))]);
 }
-async function choose(C,state,level,engine,rng=Math.random){
+
+const specials=[{id:'levy-rook',name:'Levy-inspired',depth:12,mistakes:0,description:'Unofficial fan-made rook challenge. Plays strongly, seeks a rook sacrifice every game, and becomes willing to sacrifice material after move 12. You can decline the offer; a short game may end before one is possible.'}];
+function rookOffers(C,state){
+ return C.legal(state).filter(move=>{
+  if(state.b[move[0]].toLowerCase()!=='r'||values[state.b[move[1]].toLowerCase()]>=500)return false;
+  const next=C.apply(state,move);
+  return C.legal(next).some(reply=>{
+   if(reply[1]!==move[1])return false;
+   if(values[next.b[reply[0]].toLowerCase()]<500)return true;
+   const after=C.apply(next,reply);
+   return !C.legal(after).some(recapture=>recapture[1]===reply[1]);
+  });
+ });
+}
+function confirmSacrifice(C,state,memory){
+ if(memory.offeredSquare!=null){
+  if(state.b[memory.offeredSquare]!==memory.rookPiece)memory.sacrificed=true;
+  memory.offeredSquare=null;
+ }
+}
+function evaluationForMover(result){
+ if(result.scoreType==='mate')return result.score===0?100000:result.score>0?-100000:100000;
+ return Number.isFinite(result.score)?-result.score:-Infinity;
+}
+async function rookChallenge(C,state,engine,memory,isCurrent){
+ confirmSacrifice(C,state,memory);
+ await engine.start('lite');
+ const best=await engine.bestmove(C.toFen(state),12);
+ const bestMove=C.fromUci(state,best);if(!bestMove)return C.uci(C.legal(state)[0]);
+ if(memory.sacrificed)return best;
+ const offers=rookOffers(C,state);
+ const score=async move=>{if(!isCurrent())throw Error('Game changed.');return evaluationForMover(await engine.analyze(C.toFen(C.apply(state,move)),{depth:8,movetime:80}));};
+ const baseline=await score(bestMove);
+ let chosen=null,chosenScore=-Infinity;
+ for(const move of offers){
+  const value=C.uci(move)===best?baseline:await score(move);
+  if(value>chosenScore){chosen=move;chosenScore=value;}
+ }
+ // The challenge eventually takes precedence over material preservation.
+ if(chosen&&(chosenScore>=baseline-125||state.full>=12)){
+  memory.offerUci=C.uci(chosen);memory.offeredSquare=chosen[1];memory.rookPiece=state.b[chosen[0]];
+  return memory.offerUci;
+ }
+ // Activate a rook if it can do so without substantially worsening the position.
+ let active=null,activeScore=baseline-60;
+ for(const move of C.legal(state).filter(m=>state.b[m[0]].toLowerCase()==='r'&&(m[1]>>4)!==(m[0]>>4))){
+  const value=await score(move);
+  if(value>activeScore){active=move;activeScore=value;}
+ }
+ memory.offerUci=null;
+ return active?C.uci(active):best;
+}
+
+async function choose(C,state,level,engine,rng=Math.random,memory={},isCurrent=()=>true){
+ if(level.id==='levy-rook')return rookChallenge(C,state,engine,memory,isCurrent);
  const weak=candidate(C,state,level,rng);if(weak)return weak;
  await engine.start('lite');return engine.bestmove(C.toFen(state),level.depth);
 }
-const api={levels,get:id=>levels.find(x=>x.id===id)||levels.find(x=>x.id==='sprout'),candidate,choose,delay:rng=>650+Math.floor((rng||Math.random)()*351)};
+const api={levels,specials,rookOffers,confirmSacrifice,get:id=>[...levels,...specials].find(x=>x.id===id)||levels.find(x=>x.id==='sprout'),candidate,choose,delay:rng=>650+Math.floor((rng||Math.random)()*351)};
 root.BotOpponents=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

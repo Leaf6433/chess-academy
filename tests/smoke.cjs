@@ -530,9 +530,16 @@ for(const lesson of t.D.lessons){
 }
 
 nav('bugs');assert(app.innerHTML.includes('Sign in to report a bug'));assert(app.innerHTML.includes('bug-screenshot'));assert(app.innerHTML.includes('no AI automatically changes the site'));
+nav('play');assert(app.innerHTML.includes('Special challenges'),'Challenge opponent is separate from rated levels');
+callbacks.change({target:{id:'difficulty',value:'levy-rook'}});
+assert(app.innerHTML.includes('Unofficial fan-made rook challenge'));
+assert(app.innerHTML.includes('Mission: set up a rook sacrifice'));
+press('new-computer-game');assert.equal(t.ui.board.botMemory,undefined,'New game resets sacrifice objective');
 require('./piece-motion.cjs');
 
 require('./bot-opponents.cjs');
 require('./bot-game.cjs');
 
 require('./bug-reports.cjs');
+
+require('./rook-challenge.cjs');
