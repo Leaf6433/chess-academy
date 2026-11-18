@@ -2,6 +2,16 @@
 (function(root){
 'use strict';
 const DURATION=200,GAP=65;
+// Background tabs and interrupted browser animations may never settle `finished`.
+// Visual playback must always release the board's input lock.
+const MAX_STEP_TIME=DURATION+400;
+async function finishStep(animations){
+ let timer;
+ try{await Promise.race([
+  Promise.all(animations.map(animation=>animation.finished)),
+  new Promise(resolve=>{timer=setTimeout(resolve,MAX_STEP_TIME);})
+ ]);}finally{clearTimeout(timer);}
+}
 let active=null;
 function point(square,flip){const file=square&7,row=square>>4;return [flip?7-file:file,flip?7-row:row];}
 function tracks(move){
@@ -48,8 +58,9 @@ function play(model,pieceHTML){
      piece.style.zIndex='2';
      return piece.animate([{transform:'translate(0,0)'},{transform:'translate('+((tx-x)*100)+'%,'+((ty-y)*100)+'%)'}],{duration:DURATION,easing:'cubic-bezier(.25,.65,.3,1)',fill:'forwards'});
     });
-    await Promise.all(run.animations.map(animation=>animation.finished));
+    await finishStep(run.animations);
     if(run.cancelled)return;
+    for(const animation of run.animations)animation.cancel();
     paint(step.after); // Captures, en passant and promotion resolve on arrival.
     if(step!==steps.at(-1))await new Promise(resolve=>setTimeout(resolve,GAP));
    }
@@ -57,6 +68,6 @@ function play(model,pieceHTML){
   finally{if(active===run)cancel();}
  })();
 }
-const api={play,cancel,point,tracks,DURATION,GAP};
+const api={play,cancel,point,tracks,DURATION,GAP,MAX_STEP_TIME};
 root.PieceMotion=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

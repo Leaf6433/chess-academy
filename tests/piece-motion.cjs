@@ -52,6 +52,12 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  const castling={flip:false,motionQueue:[castle]},count=animations.length;motion.play(castling,draw);
  assert.equal(animations.length,count+2,'King and rook glide together');
  motion.cancel();await tick();assert(!castling.motionActive,'Navigation unlocks input');
+ // Simulate a browser animation whose finished promise never settles.
+ const stalled={flip:false,motionQueue:[first,reply]};motion.play(stalled,draw);
+ assert(stalled.motionActive);
+ await new Promise(resolve=>setTimeout(resolve,2*motion.MAX_STEP_TIME+motion.GAP+80));
+ assert(!stalled.motionActive,'Stalled move and reply animations must release board input');
+ assert(layer.removed,'Stalled playback returns to the actual final board');
  reduced=true;const quiet={motionQueue:[first]};motion.play(quiet,draw);
  assert(!quiet.motionActive);assert.equal(quiet.motionQueue.length,0,'Reduced motion skips playback without losing the move');
  console.log('PASS: ordered move/reply animations, castling tracks, board orientation, rerenders, cancellation, promotion setup and reduced motion');

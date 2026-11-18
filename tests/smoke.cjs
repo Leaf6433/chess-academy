@@ -366,6 +366,10 @@ const beforeDaily=t.ui.board.history[0];
 const wrong=t.C.legal(beforeDaily).find(m=>t.C.uci(m)!==dailyLine[0]&&!t.C.status([t.C.apply(beforeDaily,m)]).done);
 move(t.C.uci(wrong));
 if(t.ui.board.pending)press('promote',{uci:t.C.uci(wrong)});
+move(t.C.uci(wrong));
+if(t.ui.board.pending)press('promote',{uci:t.C.uci(wrong)});
+assert(t.ui.showHint,'Daily challenge offers a hint after repeated misses');
+assert.equal(t.ui.board.hintFrom,t.C.index(dailyLine[0].slice(0,2)),'Hint highlights the correct piece in this position');
 assert.equal(t.ui.board.moves.length,0);
 assert.equal(t.data.dailySolved[t.ui.dailyDay],undefined);
 for(let i=0;i<dailyLine.length;i+=2){
